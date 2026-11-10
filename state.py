@@ -14,12 +14,19 @@ def conversation_key(kwargs, *, required=False):
 
 
 class State:
-    def __init__(self, backend=None):
-        self.backend = backend
+    def __init__(self, backend=None, backend_factory=None):
+        self._backend = backend
+        self._backend_factory = backend_factory
         self.memory = {}
         self.lock = threading.RLock()
         self.job_locks = {}
         self.preflights = {}
+
+    @property
+    def backend(self):
+        # Hermes's admission recorder intentionally has no runtime state. Resolve
+        # it only when a real hook/tool runs, retaining active profile scope.
+        return self._backend_factory() if self._backend_factory else self._backend
 
     def get(self, kind, key, default=None):
         with self.lock:

@@ -43,6 +43,16 @@ class RegistrationTests(unittest.TestCase):
         self.ctx.on_unload.assert_called_once()
         self.ctx.on_unload.call_args.args[0]()
 
+    def test_admission_recorder_needs_no_runtime_state(self):
+        class Recorder:
+            def get_config(self, key, default=None):
+                return default
+            def __getattr__(self, name):
+                if name.startswith("register_") or name == "on_unload":
+                    return lambda *args, **kwargs: None
+                raise AttributeError(name)
+        entry.register(Recorder())
+
     def test_registered_write_handler_without_gate_fails_closed(self):
         entry.register(self.ctx)
         handler = next(call.kwargs["handler"] for call in self.ctx.register_tool.call_args_list if call.kwargs["name"] == "spawn_accept")

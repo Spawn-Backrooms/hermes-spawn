@@ -11,7 +11,7 @@ from .tools import Tools
 
 
 def register(ctx):
-    jobs = Jobs(state=State(ctx.state), config=ctx.get_config)
+    jobs = Jobs(state=State(backend_factory=lambda: ctx.state), config=ctx.get_config)
     hooks = Hooks(jobs, ctx)
     tools = Tools(jobs, hooks)
     keeper = LeaseKeeper(jobs)

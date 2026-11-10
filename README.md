@@ -205,6 +205,7 @@ by Hermes. The Desktop code imports only the public SDK, React and JSX runtime.
 ## Development and validation
 
 ```sh
+python -m pip install -r requirements-dev.txt
 python -m unittest discover -s tests -v
 node --input-type=module --check < desktop/plugin.js
 node tests/desktop-smoke.mjs
