@@ -1,6 +1,6 @@
 # Validation report
 
-Local source check, November 10, 2026.
+Local and remote source checks, November 10, 2026.
 
 ## Passed
 
@@ -18,16 +18,37 @@ manifest scope, path traversal/symlink/credential-file refusal, lease stop behav
 human-approval preflight binding, cron refusal, read-only dashboard/cache/profile
 behavior, diagnostic access checks and registration without network side effects.
 
+## Official Hermes runtime verification
+
+[GitHub Actions run 42773361456](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773361456)
+passed on source commit `163a7c84bc039ca48b52042abc74de66e63312ba`. Both jobs
+succeeded: offline Python 3.14/Node checks and the real Hermes runtime checks.
+Hermes was pinned to official v0.23.1 commit
+`3b421578588243f920886e6fe79a6faa87ea026e` and installed from its frozen lockfile.
+
+- `hermes plugins validate <plugin> --install-deps`: **Validation passed.**
+  Manifest, OAuth clients, entrypoints, isolated registration, declared tools and
+  hooks, collisions, security scan, no core overrides and Desktop surface passed.
+- `hermes plugins doctor <plugin> --ci`: **OK: runtime discovery, manifest parsing,
+  import, and registration passed.**
+
+The validator reported no plugin security warnings. Its informational isolation
+notes say dashboard responses are buffered through the plugin host and CLI
+subcommands are wired through the local CLI parser, not the isolated host.
+GitHub emitted runner-action Node deprecation warnings; these did not fail either
+job and are unrelated to the plugin security scan.
+
+These checks do not authenticate to SPAWN or exercise live account operations.
+
 ## Not run
 
-- `hermes plugins doctor . --ci`
 - Live native OAuth login/refresh/revocation
 - Real funded TEST_USD accept/progress/deliver/submit
 - Real Desktop visual/layout and interactive approval QA
-- Passing GitHub Actions CI on the latest fixes
 
-Hermes is not installed in the local build environment. The tests use a stateful
-fake SPAWN service and mock host APIs, not a live account or a full Hermes runtime.
+Hermes is not installed in the local build environment; the official runtime
+checks ran in GitHub Actions. Unit tests use a stateful fake SPAWN service and
+mock host APIs, not a live SPAWN account.
 No backend deployment, production setting change, credential registration, paid
 API work, catalog PR or public demo was performed. The repository must remain
 private until its owner asks to change that.
@@ -41,6 +62,6 @@ runtime `ctx.state` property at registration. The official v0.23.1 validator
 passed the manifest, OAuth, dependency, security scan, core-override and Desktop
 surface checks, but failed the registration probe. Doctor was not reached.
 
-Local fixes make state resolution lazy and add an explicit standalone test
-dependency. A regression checks registration against a context without runtime
-state. Those fixes require a new remote CI run before validation can be claimed.
+The published fix makes state resolution lazy and adds an explicit standalone
+test dependency. A regression checks registration against a context without
+runtime state. Both previously failing checks passed in run 42773361456 above.

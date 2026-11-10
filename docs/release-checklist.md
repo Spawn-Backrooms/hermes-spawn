@@ -10,13 +10,15 @@ This is a development preview, not a submission-ready claim.
 - [x] Deterministic pins taken from the current SPAWN job schema.
 - [x] Offline tests, fake-server workflows and Desktop SDK smoke tests pass.
 - [x] README includes network, file, background, state and money disclosures.
-- [ ] `hermes plugins validate . --install-deps` passes on the exact release tree.
-- [ ] `hermes plugins doctor . --ci` passes in a real Hermes runtime.
-- [ ] Run the prepared GitHub workflow and read all security warnings.
+- [x] `hermes plugins validate . --install-deps` passes on the published source tree.
+- [x] `hermes plugins doctor . --ci` passes in a real Hermes runtime.
+- [x] Run the GitHub workflow and read all security warnings.
 
 Hermes v0.23.1's official release commit was verified as
-`3b421578588243f920886e6fe79a6faa87ea026e`. The build environment has no Hermes
-installation. Test coverage is offline, not a substitute for its validator.
+`3b421578588243f920886e6fe79a6faa87ea026e`. Both official checks passed in
+[run 42773361456](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773361456)
+on source commit `163a7c84bc039ca48b52042abc74de66e63312ba`. The security scan
+reported safe. Live SPAWN and real Desktop testing remain separate requirements.
 
 ## SPAWN owner/operator prerequisites
 
@@ -59,10 +61,11 @@ changed during the local implementation.
 ## Public release and catalog
 
 - [x] Owner created `Spawn-Backrooms/hermes-spawn` as a private repository.
-- [ ] Publish reviewed source to the private repository. Make it public only when
+- [x] Publish reviewed source to the private repository. Make it public only when
   the owner separately requests that change. Do not include customer data, inputs,
   caches or private backend files.
-- [ ] Confirm the remote commit and use its full 40-hex SHA.
+- [x] Confirm the published source commit and its full 40-hex SHA.
+- [ ] Re-run validation on the final catalog-pinned release commit.
 - [ ] Pin catalog `sha`, quoted `version: "0.1.0"`, `requires_hermes: ">=0.23.1"`,
   `tier: community`. Images must use that same reviewed commit.
 - [ ] Open a draft catalog PR containing only

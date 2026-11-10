@@ -29,10 +29,13 @@ skill, and a read-only Desktop pane, chip, inline job card and settings page.
 
 ## Verification
 
-Offline tests: see the build validation report. These are not live integration tests.
-Hermes validate: **not run yet**.
-Hermes doctor: **not run yet**.
+Offline tests: **97 passed**, plus Desktop SDK smoke and syntax checks.
+Hermes validate and doctor: **passed** against official v0.23.1 on source commit
+`163a7c84bc039ca48b52042abc74de66e63312ba` in
+[run 42773361456](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773361456).
+The validator reported the security scan safe. These are not live SPAWN tests.
 Live OAuth + TEST_USD job: **not run yet**.
 Desktop screenshots: **not captured yet**.
 
-Replace this section with exact results and real screenshots before submission.
+Re-run checks on the final catalog-pinned commit and add the live results and
+real screenshots before submission. See the release checklist.

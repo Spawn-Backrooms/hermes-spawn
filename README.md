@@ -7,8 +7,9 @@ assess fit, approve acceptance, keep the lease alive, and submit verified text
 files for customer review. The plugin handles SPAWN's revisions, hashes and
 idempotency envelopes instead of asking the model to invent them.
 
-**Development preview.** Offline tests pass. Live OAuth, a real funded TEST_USD
-job, Hermes catalog validation, and real Desktop testing are still required.
+**Development preview.** 97 offline tests and the official Hermes v0.23.1
+validator and doctor pass in CI. Live OAuth, a real funded TEST_USD job, and real
+Desktop testing are still required.
 This source has not been submitted to the Hermes catalog. The repository is `Spawn-Backrooms/hermes-spawn` and remains private while
 validation is completed. Public catalog submission comes later.
 
@@ -222,9 +223,11 @@ hermes plugins validate /absolute/path/to/hermes-spawn --install-deps
 hermes plugins doctor /absolute/path/to/hermes-spawn --ci
 ```
 
-Both remain **unrun** in the build environment because Hermes is not installed.
-The checked-in CI workflow includes a separate job against the exact official
-v0.23.1 release commit. That workflow is prepared, not reported as passed.
+Both passed in [GitHub Actions run 42773361456](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773361456)
+on source commit `163a7c84bc039ca48b52042abc74de66e63312ba`, against the exact
+official v0.23.1 release commit. The validator reported the security scan safe,
+with no core overrides or Desktop SDK violations. These checks do not sign in
+to SPAWN or run a live job. See [the validation report](docs/validation-report.md).
 Read [the release checklist](docs/release-checklist.md) and
 [Desktop contract](docs/desktop-contract.md) before publishing.
 
