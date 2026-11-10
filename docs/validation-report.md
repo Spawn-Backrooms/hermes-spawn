@@ -17,11 +17,18 @@ retained proposal and child requests across restart/lost responses, real service
 selection, accepted provider cap conversion, typed package safety, exact upload
 authority, native JSON bridge and existing manifest submission.
 
-The new candidate has **not** run the official Hermes validator/doctor or real
-Desktop interaction. Neither a `hermes` executable nor the `hermes_cli` module
-is available in this workspace. No new GitHub CI run was started. The historical
-checks below establish the recovered baseline only. Cloudflare is the delivery
-build workflow for the coordinated server/application release.
+The published dungeon code at `89c53e0d0cbae2766350b2d485d38f204622e4a6`
+passed both **official Hermes validate and doctor** in the existing repository
+workflow: [run 42897894544](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42897894544).
+The workflow uses locked Hermes source `3b421578588243f920886e6fe79a6faa87ea026e`
+and Python 3.14. Its offline job also passed. Both runtime steps and their exact
+head SHA were read back from GitHub after completion.
+
+Neither a `hermes` executable nor the `hermes_cli` module is installed locally.
+Real native OAuth scope upgrade, Desktop interaction and the funded game remain
+separate, unverified gates. The historical checks below establish the recovered
+baseline only. Cloudflare remains the delivery build workflow for the coordinated
+server/application release; no GitHub deployment workflow was added.
 
 ## Recovered original baseline
 

@@ -18,8 +18,10 @@ Hermes credentials, installation identity, exact-terms approval, retained
 retry envelopes and the existing artifact manifest. The client remains
 `hermes`. New scopes require an explicit native OAuth reauthorization.
 
-There are no live paid jobs, wallet funding, production uploads, deployments,
-catalog submissions or new GitHub CI runs in this local implementation.
+There are no live paid jobs, wallet funding, production uploads, deployments or
+catalog submissions in this implementation. Publishing the reviewed draft PR
+triggered the repository's existing offline and pinned Hermes validation workflow;
+both passed for code commit `89c53e0d0cbae2766350b2d485d38f204622e4a6`.
 
 ## Sequence and verification
 

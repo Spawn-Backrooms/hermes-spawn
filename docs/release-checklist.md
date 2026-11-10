@@ -10,16 +10,18 @@ This is a development preview, not a submission-ready claim.
 - [x] Deterministic pins taken from the current SPAWN job schema.
 - [x] Offline tests, fake-server workflows and Desktop SDK smoke tests pass.
 - [x] README includes network, file, background, state and money disclosures.
-- [ ] `hermes plugins validate . --install-deps` passes on the new release tree.
-- [ ] `hermes plugins doctor . --ci` passes for the new release in a real runtime.
+- [x] `hermes plugins validate . --install-deps` passes on dungeon code `89c53e0d0cbae2766350b2d485d38f204622e4a6` in the pinned official runtime.
+- [x] `hermes plugins doctor . --ci` passes for that same candidate and runtime.
 - [ ] Run the coordinated delivery validation through the Cloudflare workflow.
 
 Hermes v0.23.1's official release commit was verified as
 `3b421578588243f920886e6fe79a6faa87ea026e`. Both official checks passed in
 [run 42773884416](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773884416)
 on the recovered baseline `7953f81cbb693f17eb0546cc4399a147e3ed7c41`.
-That historical result does not qualify the new code. Current local tests pass;
-the Hermes runtime is unavailable here. No new GitHub workflow was started.
+The dungeon candidate independently passed both checks in the unchanged existing
+workflow, [run 42897894544](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42897894544).
+The Hermes runtime is unavailable locally. Actual OAuth/interactive Desktop and
+final catalog pin checks remain separate.
 
 ## SPAWN owner/operator prerequisites
 

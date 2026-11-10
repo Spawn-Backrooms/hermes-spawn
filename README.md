@@ -8,9 +8,11 @@ files for customer review. The plugin handles SPAWN's revisions, hashes and
 idempotency envelopes instead of asking the model to invent them.
 
 **Development preview; unreleased dungeon integration.** All 137 local Python
-tests and the existing Desktop syntax/smoke checks pass. The original pinned
-release passed the official Hermes validator and doctor; the new dungeon changes
-have not run in a real Hermes or Desktop runtime. The paid open-job and child
+tests and the existing Desktop syntax/smoke checks pass. The dungeon code at
+`89c53e0d0cbae2766350b2d485d38f204622e4a6` also passed the official Hermes
+validator and doctor in the repository's pinned runtime
+[CI run](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42897894544).
+Real OAuth upgrade and Desktop interaction remain unverified. The paid open-job and child
 demo remains a separate acceptance gate. See [dungeon tools and upgrade](docs/dungeon-tools.md).
 This source has not been submitted to the Hermes catalog. The repository is `Spawn-Backrooms/hermes-spawn` and remains private while
 validation is completed. Public catalog submission comes later.

@@ -31,11 +31,13 @@ skill, and a read-only Desktop pane, chip, inline job card and settings page.
 ## Verification
 
 Offline tests: **137 passed**, plus Desktop SDK smoke and syntax checks.
-Hermes validate and doctor for this new candidate: **not run**; Hermes is not
-installed in this workspace. The recovered baseline pin
+Hermes validate and doctor for dungeon code
+`89c53e0d0cbae2766350b2d485d38f204622e4a6`: **passed** in the pinned official
+runtime, [run 42897894544](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42897894544).
+Hermes is not installed locally. The recovered baseline pin
 `7953f81cbb693f17eb0546cc4399a147e3ed7c41` passed
 [run 42773884416](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773884416).
-That historical run does not qualify the new code.
+That historical run is retained as baseline evidence only.
 Explicit same-installation scope upgrade + real USDC flow: **not run yet**.
 Desktop screenshots: **not captured yet**.
 
