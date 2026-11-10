@@ -4,21 +4,22 @@ This is a development preview, not a submission-ready claim.
 
 ## Local build
 
-- [x] Native plugin, 12 tools, exact tool declarations and 2 hooks implemented.
+- [x] Native plugin, 20 tools, exact tool declarations and 2 hooks implemented.
 - [x] Native OAuth manifest uses public client `hermes` without a client secret.
 - [x] No credential-file reads, remote code loading or self-updater.
 - [x] Deterministic pins taken from the current SPAWN job schema.
 - [x] Offline tests, fake-server workflows and Desktop SDK smoke tests pass.
 - [x] README includes network, file, background, state and money disclosures.
-- [x] `hermes plugins validate . --install-deps` passes on the published source tree.
-- [x] `hermes plugins doctor . --ci` passes in a real Hermes runtime.
-- [x] Run the GitHub workflow and read all security warnings.
+- [ ] `hermes plugins validate . --install-deps` passes on the new release tree.
+- [ ] `hermes plugins doctor . --ci` passes for the new release in a real runtime.
+- [ ] Run the coordinated delivery validation through the Cloudflare workflow.
 
 Hermes v0.23.1's official release commit was verified as
 `3b421578588243f920886e6fe79a6faa87ea026e`. Both official checks passed in
-[run 42773361456](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773361456)
-on source commit `163a7c84bc039ca48b52042abc74de66e63312ba`. The security scan
-reported safe. Live SPAWN and real Desktop testing remain separate requirements.
+[run 42773884416](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773884416)
+on the recovered baseline `7953f81cbb693f17eb0546cc4399a147e3ed7c41`.
+That historical result does not qualify the new code. Current local tests pass;
+the Hermes runtime is unavailable here. No new GitHub workflow was started.
 
 ## SPAWN owner/operator prerequisites
 
@@ -31,7 +32,7 @@ reported safe. Live SPAWN and real Desktop testing remain separate requirements.
   variables. Review a non-destructive update before any deployment.
 - [ ] Verify the live authorization page, resource parameter, all declared scopes,
   grant refresh/revocation and correct Hermes client label.
-- [ ] Prepare an explicitly owner-approved funded TEST_USD demo job assigned to
+- [ ] Prepare an explicitly owner-approved funded USDC demo job assigned to
   the Hermes installation and an eligible beta account.
 
 None of these operator actions is performed by the plugin. No production
@@ -39,6 +40,15 @@ configuration, OAuth registration, funds, demo data or deployed backend was
 changed during the local implementation.
 
 ## End-to-end validation
+
+- [ ] Explicitly reauthorize the same installation with the three added scopes;
+  Hermes's changed native fingerprint requires fresh sign-in for this version.
+- [ ] Buyer declines or revises one proposal, then approves the exact final offer.
+- [ ] Stable preparation and a lost-response replay create one funded job/hold.
+- [ ] Review two exact child drafts under the accepted plan; reconcile real child
+  results and allocations. A draft alone is not completed work or payment.
+- [ ] Deliver the typed package and clear the game from the buyer's downloaded bytes.
+- [ ] Record customer acceptance and any on-chain payout as separate evidence.
 
 - [ ] Run fresh interactive sign-in with consent; cancel once and verify recovery.
 - [ ] Confirm denied/missing scopes and a revoked grant produce a safe sign-in error.

@@ -7,7 +7,7 @@ from .schemas import SCHEMAS, validate
 from .spawn_client import SpawnError
 from .state import conversation_key
 
-GATED = frozenset({"spawn_accept", "spawn_submit", "spawn_abandon", "spawn_create_backroom", "spawn_declare_services"})
+GATED = frozenset({"spawn_accept", "spawn_submit", "spawn_abandon", "spawn_create_backroom", "spawn_declare_services", "spawn_propose_job", "spawn_draft_child_commissions"})
 
 
 def preflight_key(tool_name, args, conversation):
@@ -31,7 +31,11 @@ class Hooks:
             if self.ctx is not None and self.ctx.current_cron_execution() is not None:
                 return {"action": "block", "message": "SPAWN commitments need a human approval in an interactive conversation; cron cannot approve them."}
             pinned = None
-            if "job_id" in args:
+            if tool_name == "spawn_propose_job":
+                pinned, summary = self.jobs.proposals.approval(args, conversation)
+            elif tool_name == "spawn_draft_child_commissions":
+                pinned, summary = self.jobs.commissions.approval(args, conversation)
+            elif "job_id" in args:
                 # A network request here could exceed Hermes's fail-closed hook timeout.
                 # Tool handlers always re-read and compare immutable terms after approval.
                 job = self.jobs.state.get("snapshot", args["job_id"])

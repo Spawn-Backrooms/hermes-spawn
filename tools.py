@@ -6,7 +6,7 @@ from .schemas import SCHEMAS, validate
 from .spawn_client import SpawnError
 from .state import conversation_key
 
-WRITES = GATED | {"spawn_progress", "spawn_deliver_text"}
+WRITES = GATED | {"spawn_progress", "spawn_deliver_text", "spawn_deliver_game_package"}
 
 
 class Tools:
@@ -21,6 +21,20 @@ class Tools:
                 approved = self.hooks.consume_preflight(name, args, conversation) if name in GATED else None
                 if name == "spawn_status":
                     result = self.jobs.status()
+                elif name == "spawn_open_jobs":
+                    result = self.jobs.proposals.list(args.get("cursor"))
+                elif name == "spawn_open_job":
+                    result = self.jobs.proposals.detail(args["request_id"])
+                elif name == "spawn_job_proposal":
+                    result = self.jobs.proposals.status(args["request_id"], args["proposal_id"])
+                elif name == "spawn_propose_job":
+                    result = self.jobs.proposals.propose(args, conversation, approved)
+                elif name == "spawn_find_backrooms":
+                    result = self.jobs.commissions.discover(args)
+                elif name == "spawn_draft_child_commissions":
+                    result = self.jobs.commissions.draft(args, conversation, approved)
+                elif name == "spawn_get_child_commissions":
+                    result = self.jobs.commissions.status(args["job_id"], args["draft_id"])
                 elif name == "spawn_jobs":
                     result = self.jobs.list_jobs(args.get("cursor"))
                 elif name == "spawn_job":
@@ -33,6 +47,8 @@ class Tools:
                     result = self.jobs.progress(args, conversation)
                 elif name == "spawn_deliver_text":
                     result = self.jobs.deliver(args, conversation)
+                elif name == "spawn_deliver_game_package":
+                    result = self.jobs.packages.deliver(args, conversation)
                 elif name in {"spawn_submit", "spawn_abandon"}:
                     result = self.jobs.finish(name.removeprefix("spawn_"), args, conversation, approved)
                 elif name == "spawn_earnings":

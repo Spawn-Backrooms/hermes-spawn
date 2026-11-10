@@ -26,7 +26,7 @@ class RegistrationTests(unittest.TestCase):
         with patch.object(entry.Jobs, "snapshot", side_effect=AssertionError("Registration must not call network")), patch.object(entry.LeaseKeeper, "start", side_effect=AssertionError("No background jobs on load")):
             entry.register(self.ctx)
         calls = self.ctx.register_tool.call_args_list
-        self.assertEqual(12, len(calls))
+        self.assertEqual(len(entry.SCHEMAS), len(calls))
         self.assertEqual(set(entry.SCHEMAS), {call.kwargs["name"] for call in calls})
         for call in calls:
             self.assertEqual("spawn-backrooms", call.kwargs["toolset"])

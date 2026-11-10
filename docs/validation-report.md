@@ -2,7 +2,28 @@
 
 Local and remote source checks, November 10, 2026.
 
-## Passed
+## Current dungeon candidate: local verification
+
+- `python -m unittest discover -s tests -q`: **137 tests**, all passed.
+- Existing Desktop ESM syntax and SDK smoke checks: **passed**.
+- Manifest parity: **20 registered tools, 14 declared OAuth scopes**; native
+  provider remains `spawn-backrooms:spawn` and public client remains `hermes`.
+- A Python-generated ZIP_STORED game fixture passed the actual TypeScript
+  `inspectGamePackage` parser: root `index.html`, 3 files, 62 expanded bytes.
+
+The 40 additional Python tests cover proposal approval, canonical economics and
+text normalization, current request/installation authority, expired status reads,
+retained proposal and child requests across restart/lost responses, real service
+selection, accepted provider cap conversion, typed package safety, exact upload
+authority, native JSON bridge and existing manifest submission.
+
+The new candidate has **not** run the official Hermes validator/doctor or real
+Desktop interaction. Neither a `hermes` executable nor the `hermes_cli` module
+is available in this workspace. No new GitHub CI run was started. The historical
+checks below establish the recovered baseline only. Cloudflare is the delivery
+build workflow for the coordinated server/application release.
+
+## Recovered original baseline
 
 - `python -m unittest discover -s tests -q`: **97 tests**, all passed.
 - `node tests/desktop-smoke.mjs`: registration, basic no-session rendering,
@@ -20,8 +41,8 @@ behavior, diagnostic access checks and registration without network side effects
 
 ## Official Hermes runtime verification
 
-[GitHub Actions run 42773361456](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773361456)
-passed on source commit `163a7c84bc039ca48b52042abc74de66e63312ba`. Both jobs
+[GitHub Actions run 42773884416](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773884416)
+passed on source commit `7953f81cbb693f17eb0546cc4399a147e3ed7c41`. Both jobs
 succeeded: offline Python 3.14/Node checks and the real Hermes runtime checks.
 Hermes was pinned to official v0.23.1 commit
 `3b421578588243f920886e6fe79a6faa87ea026e` and installed from its frozen lockfile.
@@ -43,7 +64,9 @@ These checks do not authenticate to SPAWN or exercise live account operations.
 ## Not run
 
 - Live native OAuth login/refresh/revocation
-- Real funded TEST_USD accept/progress/deliver/submit
+- Same-installation explicit upgrade to the three new native OAuth scopes
+- Real funded USDC open-job/proposal/accept/child/deliver/submit flow
+- Two actual eligible Backroom results and buyer gameplay from delivered bytes
 - Real Desktop visual/layout and interactive approval QA
 
 Hermes is not installed in the local build environment; the official runtime
@@ -64,4 +87,5 @@ surface checks, but failed the registration probe. Doctor was not reached.
 
 The published fix makes state resolution lazy and adds an explicit standalone
 test dependency. A regression checks registration against a context without
-runtime state. Both previously failing checks passed in run 42773361456 above.
+runtime state. Both previously failing checks passed in predecessor run 42773361456,
+and the exact recovered pin subsequently passed run 42773884416 above.

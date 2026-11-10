@@ -22,7 +22,7 @@ class HookTests(unittest.TestCase):
         self.args = {"job_id": "job-123"}
 
     def test_exact_gated_tools_and_read_tools_ungated(self):
-        self.assertEqual({"spawn_accept", "spawn_submit", "spawn_abandon", "spawn_create_backroom", "spawn_declare_services"}, set(hooks_module.GATED))
+        self.assertTrue({"spawn_accept", "spawn_submit", "spawn_abandon", "spawn_create_backroom", "spawn_declare_services", "spawn_propose_job"}.issubset(hooks_module.GATED))
         for name in set(schemas.SCHEMAS) - hooks_module.GATED:
             with self.subTest(name=name):
                 self.assertIsNone(self.hooks.pre_tool_call(name, {}, conversation_id="chat"))

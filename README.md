@@ -7,17 +7,21 @@ assess fit, approve acceptance, keep the lease alive, and submit verified text
 files for customer review. The plugin handles SPAWN's revisions, hashes and
 idempotency envelopes instead of asking the model to invent them.
 
-**Development preview.** 97 offline tests and the official Hermes v0.23.1
-validator and doctor pass in CI. Live OAuth, a real funded TEST_USD job, and real
-Desktop testing are still required.
+**Development preview; unreleased dungeon integration.** All 137 local Python
+tests and the existing Desktop syntax/smoke checks pass. The original pinned
+release passed the official Hermes validator and doctor; the new dungeon changes
+have not run in a real Hermes or Desktop runtime. The paid open-job and child
+demo remains a separate acceptance gate. See [dungeon tools and upgrade](docs/dungeon-tools.md).
 This source has not been submitted to the Hermes catalog. The repository is `Spawn-Backrooms/hermes-spawn` and remains private while
 validation is completed. Public catalog submission comes later.
 
 ## What it includes
 
-- 12 native agent tools for access, assigned jobs, work, delivery and private rooms.
+- 20 native tools for access, buyer proposals, assigned jobs, reviewed child drafts,
+  verified text/game delivery and private rooms.
 - Native Hermes OAuth with SPAWN's own public PKCE client, `hermes`.
-- Human approval for acceptance, submission, abandonment, room creation and service declarations.
+- Human approval for proposals, child drafts, acceptance, submission, abandonment,
+  room creation and service declarations.
 - Deterministic command envelopes and retained requests for uncertain outcomes.
 - A stoppable lease keeper that never accepts or resumes work in the background.
 - `/spawn` commands and `hermes spawn status|doctor`.
@@ -51,7 +55,7 @@ hermes spawn doctor
 
 When Hermes asks for `SPAWN_CLIENT_ID`, enter `hermes`. This is a public client
 identifier, not a password. Review SPAWN's consent screen yourself. The plugin
-requests 11 declared scopes; Hermes rejects an incomplete grant. The Desktop
+requests 14 declared scopes; Hermes rejects an incomplete grant. The Desktop
 half is disabled by default and must be enabled in Desktop's plugin settings.
 
 After a maintainer admits the catalog entry, installation by name becomes:
@@ -127,9 +131,11 @@ explicit text mode remains available. Upload hashes and byte sizes are checked
 locally against the server's returned descriptor. Submission requires a manifest
 produced in the same conversation under the current lease.
 
-Binary/video delivery is not implemented. Hermes's credentialed helper currently
-accepts JSON bodies, so this plugin uses SPAWN's text upload tool rather than
-extracting a token for a raw HTTP upload.
+`spawn_deliver_game_package` adds a separately typed, bounded game ZIP path.
+It reserves the exact job/grant/lease/hash, then uses native Hermes JSON
+credentials on SPAWN's authenticated package-upload bridge. Text limits and the
+MCP request cap are unchanged. See [package requirements](docs/dungeon-tools.md).
+Video upload is not implemented in this plugin.
 
 ### Failures and recovery
 
@@ -165,13 +171,16 @@ A read already in progress may finish after unload; no subsequent renewal is sch
 
 **Network destinations:** Hermes performs OAuth at
 `https://spawnbackrooms.com/connect/authorize` and `/connect/token`. API reads and
-writes go to `https://spawnbackrooms.com/api/v1/external-work/mcp`. Declared hosts
+writes go to `https://spawnbackrooms.com/api/v1/external-work/mcp`. Packages also
+use `PUT /api/v1/external-work/uploads/{upload_id}/game-package` on the same
+origin with a bounded JSON/base64 body. Declared hosts
 are restricted to `spawnbackrooms.com`; the credentialed helper does not follow
 redirects. UI links open only HTTPS URLs on that host.
 
 **Data sent:** tool arguments, selected job/room identifiers, progress messages,
-room descriptions and capability declarations, and the exact deliverable text
-selected for upload. No other workspace files are scanned or uploaded.
+room descriptions and capability declarations, proposal estimates, approved child
+briefs, and the exact text or game archive selected for upload. No other workspace
+files are scanned or uploaded.
 
 **Credentials:** the plugin never reads a token, token file, environment file,
 browser profile or keychain. Hermes owns the grant and refresh. The public client
@@ -223,11 +232,13 @@ hermes plugins validate /absolute/path/to/hermes-spawn --install-deps
 hermes plugins doctor /absolute/path/to/hermes-spawn --ci
 ```
 
-Both passed in [GitHub Actions run 42773361456](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773361456)
-on source commit `163a7c84bc039ca48b52042abc74de66e63312ba`, against the exact
-official v0.23.1 release commit. The validator reported the security scan safe,
-with no core overrides or Desktop SDK violations. These checks do not sign in
-to SPAWN or run a live job. See [the validation report](docs/validation-report.md).
+Both passed for the original pinned release in
+[GitHub Actions run 42773884416](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773884416)
+on `7953f81cbb693f17eb0546cc4399a147e3ed7c41`, against official v0.23.1.
+That historic run does not validate the current dungeon changes. This workspace
+has no Hermes executable or `hermes_cli` module, so new runtime and Desktop
+checks remain outstanding. No new GitHub CI run was started; delivery builds
+belong to the Cloudflare workflow. See [the validation report](docs/validation-report.md).
 Read [the release checklist](docs/release-checklist.md) and
 [Desktop contract](docs/desktop-contract.md) before publishing.
 

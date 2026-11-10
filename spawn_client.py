@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import itertools
+import base64
 import json
+import re
 import threading
 
 MCP_URL = "https://spawnbackrooms.com/api/v1/external-work/mcp"
@@ -43,6 +45,13 @@ def mapped_error(value, *, status=None, uncertain=None):
             "INVALID_ARTIFACT_MANIFEST", "INVALID_LEASE_COMMAND", "UPLOAD_EXPIRED",
             "ROOM_CREATION_NOT_AUTHORIZED", "DELEGATED_TOKEN_NOT_AUTHORIZED",
             "INVALID_REQUEST", "INVALID_ARGUMENTS", "INVALID_MCP_BODY",
+            "OPEN_JOB_CHANGED", "OPEN_JOB_NOT_FOUND", "OPEN_JOB_NOT_OPEN", "OPEN_JOB_EXPIRED",
+            "OPEN_JOB_PROPOSAL_CONFLICT", "OPEN_JOB_PROPOSAL_EXISTS", "OPEN_JOB_PLAN_OVER_CAP",
+            "OPEN_JOB_STALE_ESTIMATE", "OPEN_JOB_SELF_COMMISSION", "OPEN_JOB_SCOPE_REQUIRED",
+            "EXTERNAL_JOB_AUTHORITY_MISMATCH", "EXTERNAL_CHILD_PARENT_CHANGED", "EXTERNAL_CHILD_LEASE_STALE",
+            "EXTERNAL_CHILD_PLAN_CHANGED", "EXTERNAL_CHILD_CAP_EXCEEDED", "EXTERNAL_CHILD_SERVICE_UNAVAILABLE",
+            "EXTERNAL_CHILD_SLOT_RESERVED", "EXTERNAL_CHILD_BILLING_REQUIRED", "EXTERNAL_CHILD_DRAFT_NOT_FOUND",
+            "IDEMPOTENCY_CONFLICT", "ARTIFACT_INVALID_GAME_PACKAGE",
         }
         uncertain = code not in definitive
     # Do not echo arbitrary responses, headers, credentials, or HTML into chat/logs.
@@ -87,6 +96,42 @@ class SpawnClient:
         self.protocol = "2025-06-18"
         self.session_id = None
         self._initialized = False
+
+    def upload_game_package(self, upload_id, content):
+        """Use native JSON credentials for one exact, already reserved package."""
+        if not isinstance(upload_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", upload_id):
+            raise SpawnError("invalid_id", "Expected a SPAWN upload identifier.")
+        if not isinstance(content, bytes) or not 0 < len(content) <= 2 * 1024 * 1024:
+            raise SpawnError("request_too_large", "Game packages must contain at most 2 MiB of bytes.")
+        url = "https://spawnbackrooms.com/api/v1/external-work/uploads/" + upload_id + "/game-package"
+        try:
+            response = self._request("spawn", "PUT", url, json={"content_base64": base64.b64encode(content).decode("ascii")},
+                                     headers={"Accept": "application/json", "Content-Type": "application/json"}, timeout=30.0)
+        except SpawnError:
+            raise
+        except Exception:
+            raise SpawnError("transport_error", "SPAWN did not confirm the package upload.", uncertain=True) from None
+        status = response.status
+        if 300 <= status < 400:
+            raise SpawnError("redirect_refused", "SPAWN redirected the upload. No redirect was followed.", uncertain=True)
+        if status == 401:
+            raise mapped_error({}, status=status)
+        if len(response.text.encode("utf-8")) > MAX_RESPONSE_BYTES:
+            raise SpawnError("response_too_large", "SPAWN returned too much package metadata.", uncertain=True)
+        try:
+            payload = json.loads(response.text)
+        except (ValueError, TypeError):
+            raise SpawnError("invalid_response", "SPAWN did not confirm the uploaded package.", uncertain=True) from None
+        if not 200 <= status < 300:
+            raise mapped_error(payload, status=status, uncertain=status >= 500)
+        if not isinstance(payload, dict):
+            raise SpawnError("invalid_result", uncertain=True)
+        if "error" in payload or payload.get("ok") is False:
+            raise mapped_error(payload)
+        result = payload.get("data", payload)
+        if not isinstance(result, dict):
+            raise SpawnError("invalid_result", uncertain=True)
+        return result
 
     def _rpc(self, method, params=None, *, notification=False):
         with self._lock:
