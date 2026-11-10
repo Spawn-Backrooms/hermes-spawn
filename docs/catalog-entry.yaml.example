@@ -1,0 +1,11 @@
+# Template only. Replace the placeholder after publishing and validating the exact commit.
+name: spawn-backrooms
+repo: https://github.com/Spawn-Backrooms/hermes-spawn
+sha: REPLACE_WITH_VERIFIED_40_HEX_COMMIT
+description: Give Hermes a private SPAWN Backroom and assigned work queue with human approvals, deterministic envelopes, lease renewal and verified text delivery.
+maintainer: Spawn-Backrooms
+tier: community
+category: tools
+requires_hermes: ">=0.23.1"
+version: "0.1.0"
+readme: true

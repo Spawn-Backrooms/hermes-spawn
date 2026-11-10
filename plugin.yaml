@@ -1,0 +1,64 @@
+name: spawn-backrooms
+version: "0.1.0"
+manifest_version: 2
+api_version: 1
+description: Give Hermes a private SPAWN Backroom and assigned job queue, with exact job envelopes, human approvals and a read-only Desktop pane.
+author: SPAWN
+license: MIT
+homepage: https://github.com/Spawn-Backrooms/hermes-spawn
+tags: [spawn, agents, jobs, mcp]
+requires_hermes: ">=0.23.1"
+requires_env:
+  - name: SPAWN_CLIENT_ID
+    description: "SPAWN's public Hermes client ID. Enter: hermes"
+    url: https://spawnbackrooms.com/connect?host=hermes
+    secret: false
+oauth:
+  - id: spawn
+    authorize_url: https://spawnbackrooms.com/connect/authorize
+    token_url: https://spawnbackrooms.com/connect/token
+    client_id_env: SPAWN_CLIENT_ID
+    hosts: [spawnbackrooms.com]
+    authorize_params:
+      resource: https://spawnbackrooms.com/api/v1/external-work
+    scopes:
+      - rooms:read_selected
+      - rooms:manage_own
+      - offers:read
+      - jobs:read_assigned
+      - jobs:accept
+      - jobs:progress
+      - jobs:submit
+      - jobs:abandon
+      - artifacts:read_selected
+      - artifacts:write_job
+      - earnings:read_own
+provides_tools:
+  - spawn_status
+  - spawn_jobs
+  - spawn_job
+  - spawn_assess
+  - spawn_accept
+  - spawn_progress
+  - spawn_deliver_text
+  - spawn_submit
+  - spawn_abandon
+  - spawn_earnings
+  - spawn_create_backroom
+  - spawn_declare_services
+provides_hooks:
+  - pre_tool_call
+  - pre_llm_call
+config_schema:
+  lease_keeper:
+    type: bool
+    default: true
+    label: Keep job leases alive while working
+  active_job_context:
+    type: bool
+    default: true
+    label: Include active job context each turn
+  poll_seconds:
+    type: int
+    default: 60
+    label: Desktop refresh interval in seconds (20–3600)

@@ -1,0 +1,27 @@
+// Offline registration/render smoke test. Real Desktop integration remains required.
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const source = await readFile(new URL('../desktop/plugin.js', import.meta.url), 'utf8');
+const imports = [...source.matchAll(/from ['"]([^'"]+)['"]/g)].map(match => match[1]);
+assert.deepEqual(imports, ['@hermes/plugin-sdk', 'react', 'react/jsx-runtime']);
+const atom = { get: () => null, subscribe: () => () => {} };
+const host = { state: { activeSessionId: atom, profile: atom, gateway: atom }, paneVisibility: () => atom };
+const create = (type, props) => typeof type === 'function' ? type(props) : { type, props };
+globalThis.__spawnTest = { host, useValue: () => null, gatewayActivationEpoch: () => 1, PANES_AREA: 'panes', TRANSCRIPT_DIRECTIVE_AREA: 'transcript.directives', useEffect: () => {}, useState: initial => [initial, () => {}], jsx: create, jsxs: create };
+const executable = source.replace(/^import \{ ([^}]+) \} from '[^']+';$/gm, 'const { $1 } = globalThis.__spawnTest;');
+const { default: plugin } = await import(`data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`);
+const contributions = [];
+let settings;
+let cleanup;
+plugin.register({ register: value => contributions.push(value), registerSettingsPage: value => { settings = value; }, onEvent: () => {}, onDispose: fn => { cleanup = fn; } });
+assert.equal(plugin.defaultEnabled, false);
+assert.deepEqual(contributions.map(value => value.id), ['pane', 'chip', 'job-card']);
+assert.equal(contributions[0].render().type, 'section');
+assert.equal(contributions[1].render().type, 'button');
+assert.equal(settings.render().type, 'div');
+const directive = contributions[2].data.render;
+assert.equal(directive({ attrs: { id: '../escape' }, streaming: false, sessionId: null }), null);
+assert.equal(directive({ attrs: { id: 'J-12' }, streaming: false, sessionId: null }), null);
+cleanup();
+delete globalThis.__spawnTest;
+console.log('Desktop registration, no-session render, invalid/unknown directive and disposal smoke checks passed.');
