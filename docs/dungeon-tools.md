@@ -41,8 +41,10 @@ micro-USDC decimal strings. The approval displays the gross price, floor-rounded
 5% platform fee, seller share, own work, model/tool allowance, contingency, child
 caps and quote/estimate sources. Every source must remain current through the
 proposal expiry, and the delivery deadline must be within 30 days. Reviewer
-identity is derived from the buyer. Server revisions, installation, hashes and
-retry keys are never model inputs.
+identity is derived from the buyer. Parent revisions, installation identity,
+command envelope hashes and retry keys are derived from retained server state.
+Successor references are copied exactly from the original child status and
+validated against its canonical closure; see [child recovery](child-recovery.md).
 
 The buyer can decline or request a revision. Buyer selection and wallet funding
 remain separate SPAWN actions. Once funded, the job enters the existing assigned

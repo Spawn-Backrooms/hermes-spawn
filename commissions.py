@@ -108,6 +108,78 @@ class Commissions:
             queries[digest(saved["query"])] = saved["query"]
         return children, list(queries.values())
 
+    def _replacements(self, args, job, children):
+        refs = args.get("replaces", [])
+        if not refs:
+            return [], []
+        requested = {child["step_id"]: child for child in children}
+        if len({ref["step_id"] for ref in refs}) != len(refs) or any(ref["step_id"] not in requested for ref in refs):
+            raise SpawnError("invalid_child_replacement", "Each predecessor must name one distinct requested child step.")
+        plan = job["child_commission_plan"]
+        slots = {slot["step_id"]: slot for slot in plan["slots"]}
+        evidence = []
+        for ref in refs:
+            previous = self.state.get("child_draft", [job["installation_id"], args["job_id"], ref["draft_id"]])
+            if not previous:
+                raise SpawnError("child_history_required", "Read each predecessor with spawn_get_child_commissions before approving a successor.")
+            if (previous.get("draft_hash") != ref["draft_hash"] or previous.get("accepted_terms_hash") != plan["accepted_terms_hash"] or
+                    previous.get("plan_hash") != plan["plan_hash"]):
+                raise SpawnError("child_predecessor_changed", "The predecessor does not match the original approved parent plan.")
+            previous_children = previous.get("children")
+            if not isinstance(previous_children, list):
+                raise SpawnError("invalid_result", "SPAWN returned invalid child history.")
+            matches = [child for child in previous_children if isinstance(child, dict) and child.get("step_id") == ref["step_id"]]
+            attempt = matches[0].get("attempt") if len(matches) == 1 else None
+            if not isinstance(attempt, dict):
+                raise SpawnError("child_finality_required", "The server has not established finality for this child. Read its current status before proposing a successor.")
+            successor = attempt.get("successor")
+            if successor is not None:
+                raise SpawnError("child_replacement_exists", "This attempt already has a successor. Read that original successor instead of proposing another.", successor=copy.deepcopy(successor))
+            replacement = attempt.get("replacement")
+            ordinal = integer(attempt.get("ordinal"))
+            if (attempt.get("active") is not True or not 1 <= ordinal < 8 or not isinstance(replacement, dict) or
+                    replacement.get("status") != "eligible"):
+                raise SpawnError("child_finality_required", "A new attempt is unavailable until the current attempt has definitive finality and remaining attempt capacity.")
+            closure = hash_value(replacement.get("closure_hash"))
+            if closure != ref["closure_hash"]:
+                raise SpawnError("child_predecessor_changed", "The predecessor closure changed. Read its current status and approve the exact new evidence.")
+            spent, remaining = attempt.get("lifetime_spent_micro_usdc"), attempt.get("remaining_slot_micro_usdc")
+            validate(spent, MICRO_USDC)
+            validate(remaining, MICRO_USDC)
+            cap = int(slots[ref["step_id"]]["cap_micro_usdc"])
+            if int(spent) + int(remaining) != cap:
+                raise SpawnError("invalid_child_billing", "The canonical attempt history does not reconcile to the original child allocation.")
+            if self._customer_cap(plan["provider_billing"], requested[ref["step_id"]]["max_budget_micro_usd"]) > int(remaining):
+                raise SpawnError("child_cap_exceeded", "The previous attempts' cost plus this new cap exceeds the original USDC child allocation.")
+            evidence.append({**copy.deepcopy(ref), "ordinal": ordinal, "lifetime_spent_micro_usdc": spent,
+                             "remaining_slot_micro_usdc": remaining})
+        return copy.deepcopy(refs), evidence
+
+    @staticmethod
+    def _approval_terms(pins, children, replaces, evidence):
+        result = {**pins, "children": copy.deepcopy(children)}
+        if replaces:
+            result.update(replaces=copy.deepcopy(replaces), replacement_evidence=copy.deepcopy(evidence))
+        return result
+
+    @staticmethod
+    def _receipt_lineage(result, replaces, evidence):
+        refs = {ref["step_id"]: ref for ref in replaces}
+        original = {item["step_id"]: item for item in evidence}
+        for child in result["children"]:
+            ref = refs.get(child["step_id"])
+            attempt = child.get("attempt", {})
+            if not isinstance(attempt, dict):
+                return False
+            if ref:
+                if (result["draft_id"] == ref["draft_id"] or
+                        attempt.get("predecessor") != {key: ref[key] for key in ("draft_id", "draft_hash", "step_id")} or
+                        attempt.get("ordinal") != original[ref["step_id"]]["ordinal"] + 1):
+                    return False
+            elif attempt.get("predecessor") is not None:
+                return False
+        return True
+
     def approval(self, args, conversation):
         job = self.state.get("snapshot", args["job_id"])
         if not job:
@@ -117,6 +189,8 @@ class Commissions:
             self.jobs.require_active(conversation, job)
         pins = pending["pins"] if pending else self._pins(job)
         children = pending["arguments"]["children"] if pending else self._children(args, job)[0]
+        replaces, evidence = ((pending["arguments"].get("replaces", []), pending.get("replacement_evidence", []))
+                              if pending else self._replacements(args, job, children))
         plan = pending["plan"] if pending else job["child_commission_plan"]
         billing = plan["provider_billing"]
         lines = [f"Draft {len(children)} native child request(s) under parent {args['job_id']}.",
@@ -129,12 +203,17 @@ class Commissions:
                           "Deliverable: " + json.dumps(child["deliverable"], ensure_ascii=False),
                           "Exact exported input: " + json.dumps(child["brief"], ensure_ascii=False),
                           f"Result: {child['result_contract']}; reviewer: " + json.dumps(child["reviewer"], ensure_ascii=False)])
+            previous = next((item for item in evidence if item["step_id"] == child["step_id"]), None)
+            if previous:
+                lines.extend([f"Replace attempt {previous['ordinal']} from draft {previous['draft_id']} ({previous['draft_hash']}); closure {previous['closure_hash']}.",
+                              f"Verified lifetime cost {usdc(previous['lifetime_spent_micro_usdc'])}; remaining original slot budget {usdc(previous['remaining_slot_micro_usdc'])}.",
+                              "The prior attempt remains in history. This successor needs fresh native quote review and approvals."])
         lines.append("These are approved caps, not a native price quote. The draft moves no funds and starts no child; native review is required before allocation or execution.")
         if pending:
             lines.append("Retry the retained exact draft to recover its uncertain outcome.")
         # Pin exactly what the host displays, including service revisions resolved
         # from shared discovery state. Retained requests use their original children.
-        return {**pins, "children": copy.deepcopy(children)}, "\n".join(lines)
+        return self._approval_terms(pins, children, replaces, evidence), "\n".join(lines)
 
     def draft(self, args, conversation, approved_terms):
         with self.state.for_job(args["job_id"]):
@@ -144,7 +223,9 @@ class Commissions:
                 self.jobs.require_active(conversation, job)
             pins = pending["pins"] if pending else self._pins(job)
             children, queries = (pending["arguments"]["children"], []) if pending else self._children(args, job)
-            if {**pins, "children": children} != approved_terms:
+            replaces, evidence = ((pending["arguments"].get("replaces", []), pending.get("replacement_evidence", []))
+                                  if pending else self._replacements(args, job, children))
+            if self._approval_terms(pins, children, replaces, evidence) != approved_terms:
                 raise SpawnError("terms_changed", "The parent, lease, approved plan or selected child terms changed after child approval. Read and approve the new terms.")
             if self.state.get("pending", args["job_id"]) or self.state.get("pending_package", args["job_id"]) or self.state.get("pending_files", args["job_id"]):
                 raise SpawnError("pending_outcome", "Resolve the parent's pending action before drafting a child.")
@@ -156,6 +237,13 @@ class Commissions:
                 # must reject this stale envelope if no original effect exists.
                 arguments = pending["arguments"]
             else:
+                # Hooks remain network-free; fresh writes re-read authoritative
+                # predecessor finality and compare it to the displayed closure.
+                for ref in replaces:
+                    self.status(args["job_id"], ref["draft_id"])
+                replaces, evidence = self._replacements(args, job, children)
+                if self._approval_terms(pins, children, replaces, evidence) != approved_terms:
+                    raise SpawnError("terms_changed", "The predecessor closure or lifetime budget changed after approval. Read and approve the new terms.")
                 for query in queries:
                     result = self.discover(query)
                     current = {(s["room_id"], s["service_id"], s["service_hash"]) for s in result["candidates"]}
@@ -164,13 +252,18 @@ class Commissions:
                         raise SpawnError("child_service_changed", "A selected service changed or is no longer eligible. Discover and approve the new terms.")
                 job = self.jobs.snapshot(args["job_id"])
                 self.jobs.require_active(conversation, job)
-                if {**self._pins(job), "children": children} != approved_terms:
+                if self._approval_terms(self._pins(job), children, replaces, evidence) != approved_terms:
                     raise SpawnError("terms_changed", "The parent or approved plan changed during service refresh.")
+                extras = {"children": children, "plan_hash": pins["plan_hash"]}
+                if replaces:
+                    extras["replaces"] = replaces
                 arguments = {"job_id": args["job_id"], "accepted_terms_hash": pins["accepted_terms_hash"],
                              "plan_hash": pins["plan_hash"], "lease_generation": job["lease_generation"],
-                             "envelope": envelope(job, "draft_children", {"children": children, "plan_hash": pins["plan_hash"]}), "children": children}
+                             "envelope": envelope(job, "draft_children", extras), "children": children}
+                if replaces:
+                    arguments["replaces"] = replaces
                 self.state.set("pending_children", args["job_id"], {"conversation": conversation, "intent": digest(args), "pins": pins, "arguments": arguments,
-                                                                     "plan": copy.deepcopy(job["child_commission_plan"])})
+                                                                     "plan": copy.deepcopy(job["child_commission_plan"]), "replacement_evidence": copy.deepcopy(evidence)})
             try:
                 result = self._call("spawn_draft_child_commissions", arguments)
                 try:
@@ -181,7 +274,8 @@ class Commissions:
                              len(result["children"]) == len(arguments["children"]) and
                              re.fullmatch(r"external_children_[a-f0-9]{40}", identifier(result.get("draft_id"))))
                     hash_value(result.get("draft_hash"))
-                except (SpawnError, TypeError, AttributeError):
+                    valid = valid and self._receipt_lineage(result, replaces, evidence)
+                except (SpawnError, TypeError, AttributeError, KeyError):
                     valid = False
                 if not valid:
                     raise SpawnError("child_result_unverified", "SPAWN did not return the exact child draft receipt. Retry the same draft.", uncertain=True)
@@ -190,6 +284,9 @@ class Commissions:
                     self.state.set("pending_children", args["job_id"], None)
                 raise
             self.state.set("pending_children", args["job_id"], None)
+            self.state.set("child_draft", [job["installation_id"], args["job_id"], result["draft_id"]], result)
+            for ref in replaces:
+                self.state.set("child_draft", [job["installation_id"], args["job_id"], ref["draft_id"]], None)
             return result
 
     def status(self, job_id, draft_id):
@@ -197,4 +294,6 @@ class Commissions:
         result = self._call("spawn_get_child_commissions", {"job_id": job_id, "draft_id": draft_id})
         if result.get("job_id") != job_id or result.get("draft_id") != draft_id or result.get("installation_id") != job["installation_id"]:
             raise SpawnError("invalid_result", "SPAWN returned a different child draft.")
+        hash_value(result.get("draft_hash"))
+        self.state.set("child_draft", [job["installation_id"], job_id, draft_id], result)
         return result

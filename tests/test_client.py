@@ -117,6 +117,13 @@ class TransportTests(unittest.TestCase):
             with self.subTest(code=code):
                 self.assert_error(code, Response(rpc({"isError": True, "structuredContent": {"error": {"code": code}}})), uncertain=False)
 
+    def test_child_successor_pre_effect_denials_are_definitive(self):
+        for code in ("EXTERNAL_CHILD_PREDECESSOR_CHANGED", "EXTERNAL_CHILD_REPLACEMENT_FINALITY_REQUIRED",
+                     "EXTERNAL_CHILD_CLOSURE_CHANGED", "EXTERNAL_CHILD_ATTEMPT_LIMIT",
+                     "EXTERNAL_CHILD_LIFETIME_CAP_EXCEEDED", "EXTERNAL_CHILD_ATTEMPT_RETIRED"):
+            with self.subTest(code=code):
+                self.assert_error(code, Response(rpc({"isError": True, "structuredContent": {"error": {"code": code}}})), uncertain=False)
+
     def test_403_error(self):
         self.assert_error("forbidden", Response({"error": {"code": "forbidden"}}, status=403))
 

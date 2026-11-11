@@ -1,8 +1,30 @@
 # Validation report
 
-Local and remote source checks, November 10, 2026.
+Local and remote source checks, November 10–11, 2026.
 
-## Current dungeon candidate: local verification
+## Child recovery follow-up: local verification, November 11
+
+This follow-up starts from merged main
+`885205d2163979cd3ea8c991803151f46ac3fb39` and adds explicit successor approval
+and exact uncertain-outcome recovery. See [the recovery contract](child-recovery.md).
+
+- `python -m unittest discover -s tests -q`: **169 tests**, all passed.
+- Desktop ESM syntax and `node tests/desktop-smoke.mjs`: **passed**.
+- **21 tools and 14 OAuth scopes**; this follow-up adds no tool or scope.
+- New tests cover predecessor read requirements, unknown finality, changed
+  closure/service/economic evidence after approval, cumulative cap conversion,
+  lost replies and restart, invalid successor lineage, cross-device recovery,
+  and definitive denial versus uncertain failure classification.
+
+The inherited main passed the official pinned Hermes validator and doctor in
+[run 42965593638](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638).
+That is baseline evidence, not validation of the changed successor code. The
+follow-up's own workflow must pass on its published head before release.
+Local tests use synthetic SPAWN responses. Real OAuth upgrade, real Desktop
+interaction, production backend release, paid work, browser gameplay and payout
+remain separate qualification gates.
+
+## Historical dungeon candidate: local verification, November 10
 
 - `python -m unittest discover -s tests -q`: **137 tests**, all passed.
 - Existing Desktop ESM syntax and SDK smoke checks: **passed**.

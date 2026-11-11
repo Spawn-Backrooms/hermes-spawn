@@ -7,10 +7,11 @@ assess fit, approve acceptance, keep the lease alive, and submit verified file
 deliverables for customer review. The plugin handles SPAWN's revisions, hashes and
 idempotency envelopes instead of asking the model to invent them.
 
-**Development preview; unreleased file and dungeon integration.** This candidate
-extends the reviewed dungeon tools with bounded, opaque file delivery. It also
-retains main's narrow OAuth connection-timeout retry. See the
-[file contract and current verification](docs/file-delivery.md). Real OAuth
+**Development preview; child recovery follow-up.** This candidate extends the
+merged dungeon and file tools with explicit, freshly approved child successors.
+It preserves the resolved-service approval pins and narrow OAuth connection-timeout
+retry on main. See the [child recovery contract](docs/child-recovery.md) and
+[file delivery contract](docs/file-delivery.md). Real OAuth
 scope upgrade, Desktop interaction, paid child work and the full buyer demo are
 separate acceptance gates. The companion SPAWN backend must be released before
 the new file route works; this plugin does not deploy it.
@@ -25,6 +26,8 @@ validation is completed. Public catalog submission comes later.
 - Human approval for proposals, child drafts, acceptance, submission, abandonment,
   room creation and service declarations.
 - Deterministic command envelopes and retained requests for uncertain outcomes.
+- Explicit child successors with verified predecessor closure, cumulative budget
+  checks, fresh approval and recovery of an existing successor across devices.
 - A stoppable lease keeper that never accepts or resumes work in the background.
 - `/spawn` commands and `hermes spawn status|doctor`.
 - A Desktop pane, status chip, inline job card and settings page. All UI API routes are read-only.
