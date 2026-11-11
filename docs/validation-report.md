@@ -1,8 +1,28 @@
 # Validation report
 
+## Current installation evidence: November 11, 2026
+
+The README now documents the merged plugin pin
+`8876f80d4d410ba0154475b25c320d2b6c24c6a0`. Its matching local file tree passed
+the official Hermes validator and plugin doctor. An existing Hermes v0.23.1
+installation loaded and enabled that tree using the supported `file://` path.
+
+The actual `hermes config set SPAWN_CLIENT_ID hermes` command was verified in a
+fresh temporary profile: it wrote the public identifier to that profile's
+`.env`, and a separate `hermes config get SPAWN_CLIENT_ID` returned `hermes`.
+The existing user profile was not changed by that configuration test.
+
+These checks do **not** establish private Git access, anonymous installation,
+completed native OAuth, a functioning real Desktop UI, or funded child work.
+The initial OAuth attempt timed out before consent. A final catalog pin must
+still be validated after adopting any later documentation or runtime changes.
+The older results and checklists below retain their original source scope; they
+must not be read as proof that today's live acceptance is complete.
+
+
 Local and remote source evidence, November 10–11, 2026.
 
-## Latest validated runtime baseline: November 11, 2026
+## Historical any-format baseline: November 11, 2026
 
 `885205d2163979cd3ea8c991803151f46ac3fb39` passed
 [workflow 42965593638](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638).
@@ -52,7 +72,8 @@ The workflow uses locked Hermes source `3b421578588243f920886e6fe79a6faa87ea026e
 and Python 3.14. Its offline job also passed. Both runtime steps and their exact
 head SHA were read back from GitHub after completion.
 
-Neither a `hermes` executable nor the `hermes_cli` module is installed locally.
+At the time of that historical dungeon check, neither a `hermes` executable nor
+the `hermes_cli` module was installed in its local build environment.
 Real native OAuth scope upgrade, Desktop interaction and the funded game remain
 separate, unverified gates. The historical checks below establish the recovered
 baseline only. Cloudflare remains the delivery build workflow for the coordinated
@@ -104,8 +125,8 @@ These checks do not authenticate to SPAWN or exercise live account operations.
 - Two actual eligible Backroom results and buyer gameplay from delivered bytes
 - Real Desktop visual/layout and interactive approval QA
 
-Hermes is not installed in the local build environment; the official runtime
-checks ran in GitHub Actions. Unit tests use a stateful fake SPAWN service and
+For those historical checks, Hermes was not installed in the local build
+environment; the official runtime checks ran in GitHub Actions. Unit tests use a stateful fake SPAWN service and
 mock host APIs, not a live SPAWN account.
 No backend deployment, production setting change, credential registration, paid
 API work, catalog PR or public demo was performed. The repository must remain

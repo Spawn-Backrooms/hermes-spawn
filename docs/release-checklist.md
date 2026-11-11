@@ -1,5 +1,25 @@
 # Release checklist
 
+## Current installation evidence: November 11, 2026
+
+The README now documents the merged plugin pin
+`8876f80d4d410ba0154475b25c320d2b6c24c6a0`. Its matching local file tree passed
+the official Hermes validator and plugin doctor. An existing Hermes v0.23.1
+installation loaded and enabled that tree using the supported `file://` path.
+
+The actual `hermes config set SPAWN_CLIENT_ID hermes` command was verified in a
+fresh temporary profile: it wrote the public identifier to that profile's
+`.env`, and a separate `hermes config get SPAWN_CLIENT_ID` returned `hermes`.
+The existing user profile was not changed by that configuration test.
+
+These checks do **not** establish private Git access, anonymous installation,
+completed native OAuth, a functioning real Desktop UI, or funded child work.
+The initial OAuth attempt timed out before consent. A final catalog pin must
+still be validated after adopting any later documentation or runtime changes.
+The older results and checklists below retain their original source scope; they
+must not be read as proof that today's live acceptance is complete.
+
+
 This is a development preview, not a submission-ready claim.
 
 ## Evidence scope for the completion candidate
@@ -43,7 +63,8 @@ The any-format baseline `885205d2163979cd3ea8c991803151f46ac3fb39` also passed
 its existing offline and Hermes compatibility jobs in
 [run 42965593638](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638),
 using the same pinned official Hermes runtime. This is baseline evidence only.
-The Hermes runtime is unavailable locally. Actual OAuth/interactive Desktop and
+The Hermes runtime was unavailable in that historical build environment. It has
+since been installed and checked locally; actual OAuth/interactive Desktop and
 final catalog pin checks remain separate.
 
 ## SPAWN owner/operator prerequisites
