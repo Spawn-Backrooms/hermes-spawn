@@ -141,13 +141,13 @@ class Proposals:
                  f"Own work: {usdc(estimate['own_work_micro_usdc'])}; model/tools: {usdc(estimate['model_tools_micro_usdc'])}; contingency: {usdc(estimate['contingency_micro_usdc'])}."]
         for child in estimate["children"]:
             source = child["source"]
-            lines.append(f"Child {child['step_id']} ({child['role']}): cap {usdc(child['cap_micro_usdc'])}; deadline {due(child['deadline_at_ms'])}; result {child['result_contract']}; reviewer {quoted(child['reviewer'])}; {source['kind']} {quoted(source['reference'])}, expires {due(source['expires_at_ms'])}.")
+            lines.append(f"Child {child['step_id']} ({child['role']}): cap {usdc(child['cap_micro_usdc'])}; paid correction attempts {child.get('max_correction_attempts', 0)} within this cap; deadline {due(child['deadline_at_ms'])}; result {child['result_contract']}; reviewer {quoted(child['reviewer'])}; {source['kind']} {quoted(source['reference'])}, expires {due(source['expires_at_ms'])}.")
             selected = {k: child[k] for k in ("room_id", "service_id", "service_revision", "service_hash") if k in child}
             if selected:
                 lines.append("Selected child service: " + quoted(selected))
         for source in estimate["sources"]:
             lines.append(f"Estimate source {quoted(source['label'])}: {quoted(source['reference'])}; expires {due(source['expires_at_ms'])}.")
-        lines.append("This sends a seller proposal. The buyer separately chooses and funds it in SPAWN; child work still needs native review.")
+        lines.append("This sends a seller proposal. The buyer separately chooses and funds it in SPAWN; child work and every correction still need native owner review.")
         if pending:
             lines.append("Retry the retained exact request to recover its uncertain outcome; this does not create revised terms.")
         return pins, "\n".join(lines)

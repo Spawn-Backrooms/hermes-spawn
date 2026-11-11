@@ -9,7 +9,8 @@ import stat
 import struct
 import zipfile
 
-from .envelopes import digest, hash_value, identifier, integer, stable_key, terms
+from .envelopes import digest, integer, stable_key, terms
+from .artifacts import release_failed_delivery, verify_manifest, verify_upload
 from .spawn_client import SpawnError
 
 GAME_PACKAGE_MEDIA_TYPE = "application/vnd.spawn.game-package+zip"
@@ -97,17 +98,6 @@ class Packages:
     def __init__(self, jobs):
         self.jobs, self.state = jobs, jobs.state
 
-    def _upload_record(self, upload, job, descriptor, upload_id=None, *, verified=False):
-        if (not isinstance(upload, dict) or upload.get("job_id") != job["job_id"] or
-            upload.get("installation_id") != job["installation_id"] or upload.get("grant_epoch") != job["grant_epoch"] or
-            upload.get("lease_generation") != job["lease_generation"] or upload.get("descriptor") != descriptor or
-            (upload_id and upload.get("upload_id") != upload_id) or (verified and upload.get("state") != "verified")):
-            raise SpawnError("upload_authority_mismatch", "SPAWN did not return this exact package's job, grant, lease and hash. No manifest was submitted.", uncertain=True)
-        try:
-            return identifier(upload.get("upload_id"))
-        except SpawnError:
-            raise SpawnError("upload_authority_mismatch", "SPAWN returned an invalid package upload identity.", uncertain=True) from None
-
     def deliver(self, args, conversation):
         cwd = self.jobs.cwd
         if cwd is None:
@@ -120,7 +110,7 @@ class Packages:
         with self.state.for_job(job_id):
             job = self.jobs.snapshot(job_id)
             self.jobs.require_active(conversation, job)
-            if self.state.get("pending", job_id) or self.state.get("pending_children", job_id) or self.state.get("pending_files", job_id):
+            if self.state.get("pending", job_id) or self.state.get("pending_children", job_id) or self.state.get("pending_files", job_id) or self.state.get("pending_text", job_id):
                 raise SpawnError("pending_outcome", "Resolve the pending parent or child action before uploading a package.")
             generation = integer(job["lease_generation"])
             pins = {"terms": terms(job), "generation": generation}
@@ -130,6 +120,7 @@ class Packages:
                 raise SpawnError("pending_outcome", "Retry the same package bytes from the original conversation before uploading changed work.")
             if pending and pending["pins"] != pins:
                 raise SpawnError("authority_changed", "Package upload authority changed while its outcome was unresolved. Inspect the parent job.")
+            recovering = pending is not None
             if not pending:
                 key = stable_key(job["installation_id"], job_id, "game_package", generation, descriptor)
                 pending = {"conversation": conversation, "intent": intent, "pins": pins,
@@ -137,21 +128,18 @@ class Packages:
                 self.state.set("pending_package", job_id, pending)
             try:
                 upload = self.jobs.client.call_tool("spawn_prepare_upload", pending["arguments"])
-                upload_id = self._upload_record(upload, job, descriptor)
-                current = self.jobs.snapshot(job_id)
-                self.jobs.require_active(conversation, current)
-                if {"terms": terms(current), "generation": current["lease_generation"]} != pins:
-                    raise SpawnError("authority_changed", "The job or lease changed before package transfer.")
+                upload_id = verify_upload(upload, job, descriptor, pending.get("upload_id"))
+                pending["upload_id"] = upload_id
+                self.state.set("pending_package", job_id, pending)
+                current = self.jobs.delivery_snapshot(job_id, conversation, pins)
                 uploaded = self.jobs.client.upload_game_package(upload_id, raw)
-                self._upload_record(uploaded, current, descriptor, upload_id, verified=True)
+                verify_upload(uploaded, current, descriptor, upload_id, verified=True)
+                self.jobs.delivery_snapshot(job_id, conversation, pins)
                 manifest = self.jobs.client.call_tool("spawn_finalize_manifest", {"job_id": job_id, "generation": generation, "upload_ids": [upload_id]})
-                try:
-                    manifest_hash = hash_value(manifest.get("manifest_hash"))
-                except (SpawnError, AttributeError):
-                    raise SpawnError("manifest_unverified", "SPAWN did not confirm the package manifest. Retry the same package.", uncertain=True) from None
+                manifest_hash = verify_manifest(manifest, job, [{"upload_id": upload_id, "descriptor": descriptor}])
+                self.jobs.delivery_snapshot(job_id, conversation, pins)
             except SpawnError as exc:
-                if not exc.uncertain:
-                    self.state.set("pending_package", job_id, None)
+                release_failed_delivery(self.state, "pending_package", job_id, exc, recovering=recovering)
                 raise
             files = [{"name": name, "sha256": descriptor["sha256"], "size_bytes": len(raw)}]
             self.state.set("delivery", [conversation, job_id, manifest_hash], {"manifest_hash": manifest_hash,

@@ -117,6 +117,69 @@ class ProposalTests(unittest.TestCase):
         consumed = self.run_tool("spawn_propose_job", args)
         self.assertEqual("approval_preflight_required", consumed.get("error"))
 
+    def test_optional_correction_allowance_is_disclosed_and_preserved_exactly(self):
+        for allowance in (None, 0, 1, 2, 3):
+            with self.subTest(allowance=allowance):
+                self.setUp()
+                self.read_request()
+                args = proposal_args()
+                child = args["proposal"]["estimate"]["children"][0]
+                if allowance is not None:
+                    child["max_correction_attempts"] = allowance
+                gate = self.hooks.pre_tool_call("spawn_propose_job", args, conversation_id="chat")
+                self.assertEqual("approve", gate and gate.get("action"))
+                self.assertIn(f"paid correction attempts {allowance or 0}", gate["message"])
+                self.assertIn("within this cap", gate["message"])
+                result = self.run_tool("spawn_propose_job", args)
+                self.assertTrue(result["ok"], result)
+                sent = self.server.proposal_writes()[0]["proposal"]["estimate"]["children"][0]
+                self.assertEqual({**child, "reviewer": self.server.request["buyer"]}, sent)
+                if allowance is None:
+                    self.assertNotIn("max_correction_attempts", sent)
+                else:
+                    self.assertEqual(allowance, result["proposal"]["estimate"]["children"][0]["max_correction_attempts"])
+
+    def test_invalid_correction_allowances_are_blocked_before_any_write(self):
+        self.read_request()
+        for allowance in (-1, 4, True, False, 1.5, "1", None, 9007199254740992):
+            with self.subTest(allowance=allowance):
+                args = proposal_args()
+                args["proposal"]["estimate"]["children"][0]["max_correction_attempts"] = allowance
+                gate = self.hooks.pre_tool_call("spawn_propose_job", args, conversation_id="chat")
+                self.assertEqual("block", gate and gate.get("action"))
+                result = self.run_tool("spawn_propose_job", args)
+                self.assertEqual("invalid_arguments", result.get("error"), result)
+        self.assertEqual([], self.server.proposal_writes())
+
+    def test_correction_allowance_needs_exact_approval_and_retains_exact_retry(self):
+        backend = MemoryBackend()
+        self.jobs = Jobs(client=self.server, state=State(backend=backend))
+        self.hooks = Hooks(self.jobs)
+        self.tools = Tools(self.jobs, self.hooks)
+        self.read_request()
+        args = proposal_args()
+        args["proposal"]["estimate"]["children"][0]["max_correction_attempts"] = 1
+        gate = self.hooks.pre_tool_call("spawn_propose_job", args, conversation_id="chat")
+        self.assertEqual("approve", gate and gate.get("action"))
+        changed = copy.deepcopy(args)
+        changed["proposal"]["estimate"]["children"][0]["max_correction_attempts"] = 2
+        self.assertEqual("approval_preflight_required", self.run_tool("spawn_propose_job", changed).get("error"))
+        self.assertEqual([], self.server.proposal_writes())
+        self.server.fail_once["spawn_propose_job"] = SpawnError("transport_error", uncertain=True)
+        self.assertTrue(self.run_tool("spawn_propose_job", args).get("outcome_uncertain"))
+        self.jobs = Jobs(client=self.server, state=State(backend=backend))
+        self.hooks = Hooks(self.jobs)
+        self.tools = Tools(self.jobs, self.hooks)
+        gate = self.hooks.pre_tool_call("spawn_propose_job", changed, conversation_id="chat")
+        self.assertEqual("block", gate and gate.get("action"))
+        gate = self.hooks.pre_tool_call("spawn_propose_job", args, conversation_id="chat")
+        self.assertEqual("approve", gate and gate.get("action"))
+        self.assertIn("paid correction attempts 1", gate["message"])
+        self.assertTrue(self.run_tool("spawn_propose_job", args)["ok"])
+        writes = self.server.proposal_writes()
+        self.assertEqual(writes[0], writes[1])
+        self.assertEqual(1, len(self.server.proposals))
+
     def test_changed_request_or_grant_after_prompt_never_sends_proposal(self):
         for change in ("request_hash", "revision", "installation_id", "grant_epoch"):
             with self.subTest(change=change):

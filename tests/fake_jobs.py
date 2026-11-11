@@ -21,6 +21,7 @@ class FakeSpawn:
         self.receipts = {}
         self.fail_once = {}
         self.corrupt_upload = False
+        self.uploads = {}
 
     def call_tool(self, name, arguments=None):
         args = copy.deepcopy(arguments or {})
@@ -31,9 +32,24 @@ class FakeSpawn:
             return {"installation_id": self.job["installation_id"]}
         if name == "spawn_upload_text":
             raw = args["text"].encode("utf-8")
-            return {"upload_id": "upload_" + args["key"][-12:], "descriptor": {"sha256": "0" * 64 if self.corrupt_upload else hashlib.sha256(raw).hexdigest(), "size_bytes": len(raw)}}
+            upload_id = "upload_" + args["key"][-12:]
+            record = {"upload_id": upload_id, "job_id": self.job["job_id"],
+                      "installation_id": self.job["installation_id"], "grant_epoch": self.job["grant_epoch"],
+                      "lease_generation": args["generation"], "state": "verified",
+                      "descriptor": {"name": args["name"], "media_type": args["media_type"],
+                                     "sha256": "0" * 64 if self.corrupt_upload else hashlib.sha256(raw).hexdigest(), "size_bytes": len(raw)}}
+            self.uploads.setdefault(upload_id, record)
+            if name in self.fail_once:
+                raise self.fail_once.pop(name)
+            return copy.deepcopy(self.uploads[upload_id])
         if name == "spawn_finalize_manifest":
-            return {"manifest_hash": "e" * 64}
+            value = {"version": 1, "job_id": self.job["job_id"], "installation_id": self.job["installation_id"],
+                     "grant_epoch": self.job["grant_epoch"], "lease_generation": self.job["lease_generation"],
+                     "provenance_kind": "external_executor", "artifacts": [
+                         {"upload_id": i, "descriptor": copy.deepcopy(self.uploads[i]["descriptor"])} for i in args["upload_ids"]]}
+            if name in self.fail_once:
+                raise self.fail_once.pop(name)
+            return {"manifest_hash": load("envelopes").digest(value), "manifest": value}
         if name in {"spawn_create_room", "spawn_declare_capabilities"}:
             return {"ok": True}
         if "envelope" not in args:
@@ -48,6 +64,7 @@ class FakeSpawn:
         assert envelope["input_manifest_hashes"] == self.job["quote"]["input_manifest_hashes"]
         self.job["revision"] += 1
         if name == "spawn_accept_job":
+            self.job["lease_generation"] += 1
             self.job["state"]["execution"] = "running"
         if name == "spawn_resume_job":
             self.job["lease_generation"] += 1
