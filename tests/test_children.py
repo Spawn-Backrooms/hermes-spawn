@@ -143,6 +143,63 @@ class ChildTests(unittest.TestCase):
                 self.assertFalse(result["ok"], result)
                 self.assertEqual([], self.server.child_writes())
 
+    def test_shared_discovery_cannot_replace_a_service_after_child_approval(self):
+        self.discover()
+        args = child_args()
+        original_hash = self.server.candidates[0]["service_hash"]
+        gate = self.hooks.pre_tool_call("spawn_draft_child_commissions", args, conversation_id="chat")
+        self.assertEqual("approve", gate and gate.get("action"))
+        self.assertIn(original_hash, gate["message"])
+
+        changed_hash = "sha256:" + "9" * 64
+        self.server.candidates[0]["service_hash"] = changed_hash
+        refreshed = self.run_tool("spawn_find_backrooms", {"required_capabilities": ["coding.diff_review"]}, "other-chat")
+        self.assertTrue(refreshed["ok"], refreshed)
+        result = self.run_tool("spawn_draft_child_commissions", args)
+        self.assertEqual("terms_changed", result.get("error"), result)
+        self.assertEqual([], self.server.child_writes())
+        self.assertIsNone(self.jobs.state.get("pending_children", "job-123"))
+
+        # A new host-owned prompt must show the revised service before it can be sent.
+        gate = self.hooks.pre_tool_call("spawn_draft_child_commissions", args, conversation_id="chat")
+        self.assertEqual("approve", gate and gate.get("action"))
+        self.assertIn(changed_hash, gate["message"])
+        self.assertNotIn(original_hash, gate["message"])
+        result = self.run_tool("spawn_draft_child_commissions", args)
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(changed_hash, self.server.child_writes()[0]["children"][0]["service_hash"])
+
+    def test_shared_discovery_of_unchanged_service_preserves_child_approval(self):
+        self.discover()
+        args = child_args()
+        gate = self.hooks.pre_tool_call("spawn_draft_child_commissions", args, conversation_id="chat")
+        self.assertEqual("approve", gate and gate.get("action"))
+        refreshed = self.run_tool("spawn_find_backrooms", {"required_capabilities": ["coding.diff_review"]}, "other-chat")
+        self.assertTrue(refreshed["ok"], refreshed)
+        result = self.run_tool("spawn_draft_child_commissions", args)
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(1, len(self.server.child_writes()))
+
+    def test_pending_child_recovery_approves_original_service_despite_cache_refresh(self):
+        self.discover()
+        args = child_args()
+        original_hash = self.server.candidates[0]["service_hash"]
+        self.hooks.pre_tool_call("spawn_draft_child_commissions", args, conversation_id="chat")
+        self.server.fail_once["spawn_draft_child_commissions"] = SpawnError("transport_error", uncertain=True)
+        self.assertTrue(self.run_tool("spawn_draft_child_commissions", args).get("outcome_uncertain"))
+        original = copy.deepcopy(self.server.child_writes()[0])
+        self.restart()
+        self.server.candidates[0]["service_hash"] = "sha256:" + "9" * 64
+        self.discover()
+        gate = self.hooks.pre_tool_call("spawn_draft_child_commissions", args, conversation_id="chat")
+        self.assertEqual("approve", gate and gate.get("action"))
+        self.assertIn(original_hash, gate["message"])
+        self.assertNotIn(self.server.candidates[0]["service_hash"], gate["message"])
+        result = self.run_tool("spawn_draft_child_commissions", args)
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(original, self.server.child_writes()[-1])
+        self.assertEqual(1, len(self.server.drafts))
+
     def test_native_budget_conversion_honors_accepted_usdc_cap(self):
         self.server.job["child_commission_plan"]["provider_billing"]["rate_numerator"] = "3"
         self.server.job["child_commission_plan"]["provider_billing"]["rate_denominator"] = "2"

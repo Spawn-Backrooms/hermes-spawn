@@ -50,8 +50,11 @@ queue and uses the existing human-approved acceptance flow.
 
 For children, discover actual services and read the active job's approved plan.
 The approval shows the exact exported brief, deliverable, room, service hash,
-deadline, reviewer and provider cap. Accepted provider billing terms determine
-how that cap fits the original USDC allocation. A draft creates no child execution
+deadline, reviewer and provider cap. The preflight pins those resolved child
+terms, so a discovery refresh in another conversation cannot silently substitute
+a newer service revision after approval. Changed terms require a new prompt;
+uncertain draft recovery still displays and replays the original exact request.
+Accepted provider billing terms determine how that cap fits the original USDC allocation. A draft creates no child execution
 or spend authority; SPAWN's native actors must review exact terms. Empty discovery
 does not produce a fabricated candidate. Pixel-grid output needs a real qualified
 `art.pixel_grid` service. Source review is not an executed gameplay test.
