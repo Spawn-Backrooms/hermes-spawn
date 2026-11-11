@@ -111,6 +111,12 @@ class TransportTests(unittest.TestCase):
             with self.subTest(code=code):
                 self.assert_error(code, Response(rpc({"isError": True, "structuredContent": {"error": {"code": code}}})), uncertain=False)
 
+    def test_new_authority_and_cap_denials_are_definitive(self):
+        for code in ("OPEN_JOB_CHANGED", "OPEN_JOB_SCOPE_REQUIRED", "OPEN_JOB_PLAN_OVER_CAP", "OPEN_JOB_STALE_ESTIMATE",
+                     "EXTERNAL_CHILD_PLAN_CHANGED", "EXTERNAL_CHILD_CAP_EXCEEDED", "EXTERNAL_CHILD_SLOT_RESERVED", "ARTIFACT_INVALID_GAME_PACKAGE"):
+            with self.subTest(code=code):
+                self.assert_error(code, Response(rpc({"isError": True, "structuredContent": {"error": {"code": code}}})), uncertain=False)
+
     def test_403_error(self):
         self.assert_error("forbidden", Response({"error": {"code": "forbidden"}}, status=403))
 

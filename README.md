@@ -3,21 +3,27 @@
 ![SPAWN Backrooms](assets/banner.svg)
 
 Give Hermes a private Backroom and an assigned job queue. Inspect the work,
-assess fit, approve acceptance, keep the lease alive, and submit verified text
-files for customer review. The plugin handles SPAWN's revisions, hashes and
+assess fit, approve acceptance, keep the lease alive, and submit verified file
+deliverables for customer review. The plugin handles SPAWN's revisions, hashes and
 idempotency envelopes instead of asking the model to invent them.
 
-**Development preview.** 97 offline tests and the official Hermes v0.23.1
-validator and doctor pass in CI. Live OAuth, a real funded TEST_USD job, and real
-Desktop testing are still required.
+**Development preview; unreleased file and dungeon integration.** This candidate
+extends the reviewed dungeon tools with bounded, opaque file delivery. It also
+retains main's narrow OAuth connection-timeout retry. See the
+[file contract and current verification](docs/file-delivery.md). Real OAuth
+scope upgrade, Desktop interaction, paid child work and the full buyer demo are
+separate acceptance gates. The companion SPAWN backend must be released before
+the new file route works; this plugin does not deploy it.
 This source has not been submitted to the Hermes catalog. The repository is `Spawn-Backrooms/hermes-spawn` and remains private while
 validation is completed. Public catalog submission comes later.
 
 ## What it includes
 
-- 12 native agent tools for access, assigned jobs, work, delivery and private rooms.
+- 21 native tools for access, buyer proposals, assigned jobs, reviewed child drafts,
+  verified text, arbitrary-file and game delivery and private rooms.
 - Native Hermes OAuth with SPAWN's own public PKCE client, `hermes`.
-- Human approval for acceptance, submission, abandonment, room creation and service declarations.
+- Human approval for proposals, child drafts, acceptance, submission, abandonment,
+  room creation and service declarations.
 - Deterministic command envelopes and retained requests for uncertain outcomes.
 - A stoppable lease keeper that never accepts or resumes work in the background.
 - `/spawn` commands and `hermes spawn status|doctor`.
@@ -51,7 +57,7 @@ hermes spawn doctor
 
 When Hermes asks for `SPAWN_CLIENT_ID`, enter `hermes`. This is a public client
 identifier, not a password. Review SPAWN's consent screen yourself. The plugin
-requests 11 declared scopes; Hermes rejects an incomplete grant. The Desktop
+requests 14 declared scopes; Hermes rejects an incomplete grant. The Desktop
 half is disabled by default and must be enabled in Desktop's plugin settings.
 
 After a maintainer admits the catalog entry, installation by name becomes:
@@ -70,7 +76,7 @@ Sign-in, storage, refresh and sign-out belong to Hermes.
 3. Ask it to assess whether it can do the work within the deadline.
 4. Review the exact terms and approve `spawn_accept` through Hermes's prompt.
 5. Complete and check the work locally. Report milestones with `spawn_progress`.
-6. Upload text with `spawn_deliver_text`. Review the resulting files and manifest.
+6. Deliver files with `spawn_deliver_files`, small text with `spawn_deliver_text`, or a validated game ZIP with `spawn_deliver_game_package`. Review the files and manifest.
 7. Approve `spawn_submit` to send the verified manifest for customer review.
 
 The bundled `spawn-backrooms:work-a-job` skill describes the full loop. A Desktop
@@ -101,6 +107,8 @@ hermes spawn doctor
 | `spawn_accept` | Accept a funded, owner-approved assigned job | Yes |
 | `spawn_progress` | Renew a lease and report a milestone | No |
 | `spawn_deliver_text` | Upload and verify small text files, without submission | No |
+| `spawn_deliver_files` | Any-format download-only files, 1 byte–5 MiB each | No |
+| `spawn_deliver_game_package` | Validated 2 MiB game ZIP, download-only | No |
 | `spawn_submit` | Submit a verified manifest for review | Yes |
 | `spawn_abandon` | Abandon unsubmitted work | Yes |
 | `spawn_earnings` | Read recorded amounts | No |
@@ -112,6 +120,29 @@ blocking on network I/O. A handler re-reads the job after approval and refuses
 changed hashes or authority. Preflight records are scoped to the conversation
 and exact arguments; Hermes still owns the actual approval decision. Cron
 commitments are refused. Unattended sessions cannot manufacture an approval.
+
+### Any-format file delivery
+
+Use `spawn_deliver_files` with `files: [{path: "outputs/report.pdf"}]`.
+Each entry may specify a safe output `name` and a lowercase `media_type` such as
+`application/pdf`. The MIME is descriptive metadata only. SPAWN stores and serves
+all generic files as `application/octet-stream`, with authenticated attachment
+headers and no inline preview, execution, archive extraction or content sniffing.
+
+Images, audio, video, PDFs, Office files, HTML/JS, source, archives and unknown
+extensions all use the same byte-preserving path. Each file must be 1 byte to
+5 MiB, with 1–10 files per manifest. This is broad format support, not unlimited
+file size, format validation, malware scanning or a promise that a viewer can
+open every file. Explicit paths only; directories and automatic recursive
+packing are not supported. Choose outputs carefully and exclude secrets before
+uploading, including from archives.
+
+Every file is checked before any reservation, rechecked before transfer and
+verified against its SHA-256, size, installation, grant and lease. The complete
+returned manifest and its canonical hash are verified. Uncertain batches retain
+exact metadata and retry keys across restarts and block other job mutations.
+Keep the original bytes available for recovery. Submission still requires the
+existing separate human approval. See [full limits and safety](docs/file-delivery.md).
 
 ### Text delivery limits
 
@@ -127,9 +158,11 @@ explicit text mode remains available. Upload hashes and byte sizes are checked
 locally against the server's returned descriptor. Submission requires a manifest
 produced in the same conversation under the current lease.
 
-Binary/video delivery is not implemented. Hermes's credentialed helper currently
-accepts JSON bodies, so this plugin uses SPAWN's text upload tool rather than
-extracting a token for a raw HTTP upload.
+`spawn_deliver_game_package` adds a separately typed, bounded game ZIP path.
+It reserves the exact job/grant/lease/hash, then uses native Hermes JSON
+credentials on SPAWN's authenticated package-upload bridge. Text limits and the
+MCP request cap are unchanged. See [package requirements](docs/dungeon-tools.md).
+Video upload is not implemented in this plugin.
 
 ### Failures and recovery
 
@@ -165,13 +198,17 @@ A read already in progress may finish after unload; no subsequent renewal is sch
 
 **Network destinations:** Hermes performs OAuth at
 `https://spawnbackrooms.com/connect/authorize` and `/connect/token`. API reads and
-writes go to `https://spawnbackrooms.com/api/v1/external-work/mcp`. Declared hosts
+writes go to `https://spawnbackrooms.com/api/v1/external-work/mcp`. Generic files use
+`PUT /api/v1/external-work/uploads/{upload_id}/file`; game packages also
+use `PUT /api/v1/external-work/uploads/{upload_id}/game-package` on the same
+origin with a bounded JSON/base64 body. Declared hosts
 are restricted to `spawnbackrooms.com`; the credentialed helper does not follow
 redirects. UI links open only HTTPS URLs on that host.
 
 **Data sent:** tool arguments, selected job/room identifiers, progress messages,
-room descriptions and capability declarations, and the exact deliverable text
-selected for upload. No other workspace files are scanned or uploaded.
+room descriptions and capability declarations, proposal estimates, approved child
+briefs, and the exact text, files or game archive selected for upload. No other workspace
+files are scanned or uploaded.
 
 **Credentials:** the plugin never reads a token, token file, environment file,
 browser profile or keychain. Hermes owns the grant and refresh. The public client
@@ -181,7 +218,7 @@ ID is read through `agent.secret_scope.get_secret` only for the diagnostic comma
 manifest references and uncertain-command envelopes use Hermes's profile-scoped
 plugin state. These can contain job terms and progress text. Full customer input
 JSON is cached under `<HERMES_HOME>/plugin-data/spawn-backrooms/inputs` using hashed
-filenames. Text path mode reads only explicitly named files inside the session
+filenames. All file path modes read only explicitly named files inside the session
 working directory. The cache does not expire automatically; owners can remove
 plugin-owned data when they no longer need it, after resolving active work.
 
@@ -223,11 +260,13 @@ hermes plugins validate /absolute/path/to/hermes-spawn --install-deps
 hermes plugins doctor /absolute/path/to/hermes-spawn --ci
 ```
 
-Both passed in [GitHub Actions run 42773361456](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773361456)
-on source commit `163a7c84bc039ca48b52042abc74de66e63312ba`, against the exact
-official v0.23.1 release commit. The validator reported the security scan safe,
-with no core overrides or Desktop SDK violations. These checks do not sign in
-to SPAWN or run a live job. See [the validation report](docs/validation-report.md).
+Both passed for the original pinned release in
+[GitHub Actions run 42773884416](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773884416)
+on `7953f81cbb693f17eb0546cc4399a147e3ed7c41`, against official v0.23.1.
+That historic run does not validate this file-delivery extension. See
+[current candidate verification](docs/file-delivery.md) for local and exact-head
+CI results. Production delivery belongs to the separate Cloudflare release
+workflow and was not performed here.
 Read [the release checklist](docs/release-checklist.md) and
 [Desktop contract](docs/desktop-contract.md) before publishing.
 

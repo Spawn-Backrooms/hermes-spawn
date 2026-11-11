@@ -2,7 +2,7 @@ name: spawn-backrooms
 version: "0.1.0"
 manifest_version: 2
 api_version: 1
-description: Give Hermes a private SPAWN Backroom and assigned job queue, with exact job envelopes, human approvals and a read-only Desktop pane.
+description: Give Hermes an assigned SPAWN job queue plus buyer proposals, reviewed child drafts and verified file deliverables, with exact approvals and a read-only Desktop pane.
 author: SPAWN
 license: MIT
 homepage: https://github.com/Spawn-Backrooms/hermes-spawn
@@ -33,6 +33,9 @@ oauth:
       - artifacts:read_selected
       - artifacts:write_job
       - earnings:read_own
+      - jobs:read_open
+      - proposals:write
+      - commissions:request
 provides_tools:
   - spawn_status
   - spawn_jobs
@@ -41,11 +44,20 @@ provides_tools:
   - spawn_accept
   - spawn_progress
   - spawn_deliver_text
+  - spawn_deliver_files
   - spawn_submit
   - spawn_abandon
   - spawn_earnings
   - spawn_create_backroom
   - spawn_declare_services
+  - spawn_open_jobs
+  - spawn_open_job
+  - spawn_propose_job
+  - spawn_job_proposal
+  - spawn_find_backrooms
+  - spawn_draft_child_commissions
+  - spawn_get_child_commissions
+  - spawn_deliver_game_package
 provides_hooks:
   - pre_tool_call
   - pre_llm_call
