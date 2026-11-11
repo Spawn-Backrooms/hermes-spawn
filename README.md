@@ -56,12 +56,12 @@ access to it. Browser sign-in alone does not grant Git access. Once the reposito
 is public, this same command works without private-repository access:
 
 ```sh
-hermes plugins install https://github.com/Spawn-Backrooms/hermes-spawn.git --ref 9c4f0897ecaf9a13f7d5f333405e851ff6a6e253
+hermes plugins install https://github.com/Spawn-Backrooms/hermes-spawn.git --ref 9f0259dc436cf6025645518e081ee0c03d0b23a1
 hermes plugins enable spawn-backrooms
 ```
 
 Review the installer's source and dependency prompts. This is a full immutable
-commit pin, not a moving branch. It includes the credential-path protection fix.
+commit pin, not a moving branch. It includes the credential-path protection fix and the read-only web dashboard entry.
 Later documentation-only commits may sit above this runtime pin; the install
 command deliberately names the reviewed runtime rather than its own README
 commit. Source checks do not prove live sign-in or paid work.
@@ -71,8 +71,8 @@ absolute path. Hermes v0.23.1 interprets the latter as a repository identifier:
 
 ```sh
 cd /absolute/path/to/hermes-spawn
-git checkout --detach 9c4f0897ecaf9a13f7d5f333405e851ff6a6e253
-hermes plugins install "file://$(pwd)" --ref 9c4f0897ecaf9a13f7d5f333405e851ff6a6e253
+git checkout --detach 9f0259dc436cf6025645518e081ee0c03d0b23a1
+hermes plugins install "file://$(pwd)" --ref 9f0259dc436cf6025645518e081ee0c03d0b23a1
 hermes plugins enable spawn-backrooms
 ```
 
