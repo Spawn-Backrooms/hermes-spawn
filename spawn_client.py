@@ -4,6 +4,7 @@ from __future__ import annotations
 import itertools
 import json
 import threading
+import time
 
 MCP_URL = "https://spawnbackrooms.com/api/v1/external-work/mcp"
 SIGN_IN = "hermes auth add spawn-backrooms:spawn"
@@ -69,14 +70,26 @@ def credentialed_request(*args, **kwargs):
     """Own plugin frame must stay on the stack for Hermes's caller attribution."""
     from hermes_cli.auth_constants import AuthError
     from hermes_cli.plugin_provider_requests import ProviderNotSignedIn, credentialed_provider_request
-    try:
-        return credentialed_provider_request(*args, **kwargs)
-    except ProviderNotSignedIn:
-        raise SpawnError("not_signed_in", "Sign in to SPAWN through Hermes.", fix=SIGN_IN) from None
-    except AuthError as exc:
-        raise SpawnError(getattr(exc, "code", "oauth_error"), "Hermes could not use the SPAWN grant.", fix=SIGN_IN) from None
-    except PermissionError:
-        raise SpawnError("provider_permission_denied", "Enable the installed plugin and use its declared SPAWN OAuth grant.") from None
+    for attempt in range(3):
+        try:
+            return credentialed_provider_request(*args, **kwargs)
+        except ProviderNotSignedIn:
+            raise SpawnError("not_signed_in", "Sign in to SPAWN through Hermes.", fix=SIGN_IN) from None
+        except AuthError as exc:
+            # Hermes v0.23.1 raises this exact error before sending the token request or
+            # the plugin request. Re-enter Hermes after it releases its auth-store lock;
+            # never replay a read/write timeout or a request whose outcome is uncertain.
+            connect_timeout = (getattr(exc, "code", None) == "oauth_refresh_failed"
+                               and str(exc).endswith("the token request failed (ConnectTimeout)."))
+            if connect_timeout:
+                if attempt < 2:
+                    time.sleep(0.25 * (attempt + 1))
+                    continue
+                raise SpawnError("oauth_connection_timeout", "Hermes could not connect to SPAWN's sign-in service.",
+                                 retryable=True, fix="Try /spawn status again. Your existing sign-in is preserved.") from None
+            raise SpawnError(getattr(exc, "code", "oauth_error"), "Hermes could not use the SPAWN grant.", fix=SIGN_IN) from None
+        except PermissionError:
+            raise SpawnError("provider_permission_denied", "Enable the installed plugin and use its declared SPAWN OAuth grant.") from None
 
 
 class SpawnClient:
