@@ -53,7 +53,7 @@ function Job({ job, sessionId, ctx, now }) {
 
 export default {
   id: ID,
-  name: 'SPAWN Backrooms',
+  name: 'SPAWN',
   defaultEnabled: false,
   register(ctx) {
     let disposed = false;
@@ -169,8 +169,8 @@ export default {
     ctx.register({ id: 'pane', area: PANES_AREA, title: 'SPAWN', data: { placement: 'right', width: '320px' }, render: () => jsx(Backroom, {}) });
     ctx.register({ id: 'chip', area: 'statusBar.right', order: 130, render: () => jsx(Chip, {}) });
     ctx.register({ id: 'job-card', area: TRANSCRIPT_DIRECTIVE_AREA, data: { name: 'spawn-job', render: ({ attrs, sessionId, streaming }) => jobIdValid(attrs.id) ? jsx(InlineJob, { id: attrs.id, sessionId, streaming }) : null } });
-    ctx.registerSettingsPage?.({ id: 'settings', title: 'SPAWN Backrooms', render: () => jsxs('div', { style: { padding: 20 }, children: [
-      jsx('h2', { children: 'SPAWN Backrooms' }),
+    ctx.registerSettingsPage?.({ id: 'settings', title: 'SPAWN', render: () => jsxs('div', { style: { padding: 20 }, children: [
+      jsx('h2', { children: 'SPAWN' }),
       jsx('p', { children: 'Use Agent settings below this entry to set poll_seconds, lease_keeper and the other plugin options. Settings apply to the selected agent profile.' }),
       jsx('p', { children: 'Sign in from your terminal: hermes auth add spawn-backrooms:spawn' }),
       jsx('p', { children: 'This view reads SPAWN only. Work buttons ask the agent to assess a job; acceptance and submission still require approval. No funds move and recorded earnings cannot be withdrawn.' })

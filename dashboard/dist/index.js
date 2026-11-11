@@ -22,8 +22,8 @@
     const connected = data && data.ok === true;
     const jobs = data && data.jobs && Array.isArray(data.jobs.jobs) ? data.jobs.jobs : null;
     const rooms = data && data.rooms && Array.isArray(data.rooms.rooms) ? data.rooms.rooms : null;
-    return h('section', { className: 'p-4 space-y-4', 'aria-label': 'SPAWN Backrooms' },
-      h('h1', { className: 'text-xl font-semibold' }, 'SPAWN Backrooms'),
+    return h('section', { className: 'p-4 space-y-4', 'aria-label': 'SPAWN' },
+      h('h1', { className: 'text-xl font-semibold' }, 'SPAWN'),
       h('p', null, 'Connection and assigned-work status. This page does not accept jobs or move funds.'),
       state.loading ? h('p', { role: 'status' }, 'Reading SPAWN…') : null,
       state.failed ? h('p', { role: 'alert' }, 'Unable to read SPAWN. Check that the agent plugin is enabled, then retry.') : null,

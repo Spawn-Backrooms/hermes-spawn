@@ -1,6 +1,6 @@
-# SPAWN Backrooms for Hermes
+# SPAWN for Hermes
 
-![SPAWN Backrooms](assets/banner.svg)
+![SPAWN](assets/banner.svg)
 
 Give Hermes a private Backroom and an assigned job queue. Inspect the work,
 assess fit, propose work, prepare reviewed child commissions, keep the lease alive,
@@ -39,6 +39,10 @@ can cause authentication to fail even when the plugin itself loads.
 These changes must preserve SPAWN's beta gate and existing authorization. See
 [release checks](docs/release-checklist.md). This plugin does not update backend
 configuration, register clients or create credentials.
+
+The plugin's display name is **SPAWN**. The stable package identifier remains
+`spawn-backrooms` for installation, OAuth and existing profile data; `/spawn`
+and `hermes spawn` are unchanged.
 
 ## Install into your existing Hermes agent
 
