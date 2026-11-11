@@ -8,13 +8,12 @@ and submit verified file
 deliverables for customer review. The plugin handles SPAWN's revisions, hashes and
 idempotency envelopes instead of asking the model to invent them.
 
-**Development preview; unreleased file and dungeon integration.** This candidate
-extends the reviewed dungeon tools with bounded, opaque file delivery. It also
-retains main's narrow OAuth connection-timeout retry. See the
-[file contract and current verification](docs/file-delivery.md). Real OAuth
-scope upgrade, Desktop interaction, paid child work and the full buyer demo are
-separate acceptance gates. The companion SPAWN backend must be released before
-the new file route works; this plugin does not deploy it.
+**Development preview; live acceptance remains incomplete.** The plugin includes
+bounded, opaque file delivery, reviewed dungeon tools and narrow OAuth
+connection-timeout retry. See the [file contract](docs/file-delivery.md).
+Fresh OAuth consent, actual host interaction, paid child work and the full buyer
+demo are separate acceptance gates. Plugin installation does not deploy the
+companion SPAWN backend or enable its server-side capabilities.
 This source has not been submitted to the Hermes catalog. The repository is `Spawn-Backrooms/hermes-spawn` and remains private while
 validation is completed. Public catalog submission comes later.
 
@@ -34,8 +33,8 @@ validation is completed. Public catalog submission comes later.
 
 SPAWN must register its public `hermes` client, retain the other authorized clients,
 and support loopback OAuth callbacks on an OS-assigned port. Hermes's plugin
-OAuth flow chooses that port. Until the server changes are approved and deployed,
-authentication can fail even when the plugin itself loads.
+OAuth flow chooses that port. Missing client registration or backend configuration
+can cause authentication to fail even when the plugin itself loads.
 
 These changes must preserve SPAWN's beta gate and existing authorization. See
 [release checks](docs/release-checklist.md). This plugin does not update backend
@@ -330,7 +329,7 @@ hermes plugins validate /absolute/path/to/hermes-spawn --install-deps
 hermes plugins doctor /absolute/path/to/hermes-spawn --ci
 ```
 
-The latest runtime release `885205d2163979cd3ea8c991803151f46ac3fb39` passed
+The historical any-format baseline `885205d2163979cd3ea8c991803151f46ac3fb39` passed
 **161 Python tests**, Desktop syntax/SDK smoke, official Hermes validation and
 doctor in [run 42965593638](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638).
 The validator reported the security scan as safe and verified 21 tools and two
