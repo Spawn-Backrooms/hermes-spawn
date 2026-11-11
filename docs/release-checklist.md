@@ -4,7 +4,7 @@ This is a development preview, not a submission-ready claim.
 
 ## Local build
 
-- [x] Native plugin, 20 tools, exact tool declarations and 2 hooks implemented.
+- [x] Native plugin, 21 tools, exact tool declarations and 2 hooks implemented.
 - [x] Native OAuth manifest uses public client `hermes` without a client secret.
 - [x] No credential-file reads, remote code loading or self-updater.
 - [x] Deterministic pins taken from the current SPAWN job schema.
@@ -88,3 +88,16 @@ changed during the local implementation.
 
 No catalog PR, public post, form submission or deployment is included in this
 local build. See [catalog rules](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins/catalog-submission).
+
+
+## Any-format delivery candidate
+
+- [x] Generic file path uses existing artifact-write scope and native credentials.
+- [x] Explicit regular-file reads, 5 MiB bound, exact descriptors and canonical manifest verification.
+- [x] Retained batch identity and retry keys survive uncertain upload/finalization outcomes.
+- [x] Existing game/text lanes, human submission approval and main OAuth retry preserved.
+- [ ] Exact candidate full CI, native validator and doctor recorded in docs/file-delivery.md.
+- [ ] Companion backend released through its existing approval and release gates.
+- [ ] Real buyer upload/download hash comparison and Desktop interaction qualified.
+
+These source checks are not live-delivery or deployment evidence.

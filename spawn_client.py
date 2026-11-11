@@ -6,6 +6,7 @@ import base64
 import json
 import re
 import threading
+import time
 
 MCP_URL = "https://spawnbackrooms.com/api/v1/external-work/mcp"
 SIGN_IN = "hermes auth add spawn-backrooms:spawn"
@@ -78,14 +79,26 @@ def credentialed_request(*args, **kwargs):
     """Own plugin frame must stay on the stack for Hermes's caller attribution."""
     from hermes_cli.auth_constants import AuthError
     from hermes_cli.plugin_provider_requests import ProviderNotSignedIn, credentialed_provider_request
-    try:
-        return credentialed_provider_request(*args, **kwargs)
-    except ProviderNotSignedIn:
-        raise SpawnError("not_signed_in", "Sign in to SPAWN through Hermes.", fix=SIGN_IN) from None
-    except AuthError as exc:
-        raise SpawnError(getattr(exc, "code", "oauth_error"), "Hermes could not use the SPAWN grant.", fix=SIGN_IN) from None
-    except PermissionError:
-        raise SpawnError("provider_permission_denied", "Enable the installed plugin and use its declared SPAWN OAuth grant.") from None
+    for attempt in range(3):
+        try:
+            return credentialed_provider_request(*args, **kwargs)
+        except ProviderNotSignedIn:
+            raise SpawnError("not_signed_in", "Sign in to SPAWN through Hermes.", fix=SIGN_IN) from None
+        except AuthError as exc:
+            # Hermes v0.23.1 raises this exact error before sending the token request or
+            # the plugin request. Re-enter Hermes after it releases its auth-store lock;
+            # never replay a read/write timeout or a request whose outcome is uncertain.
+            connect_timeout = (getattr(exc, "code", None) == "oauth_refresh_failed"
+                               and str(exc).endswith("the token request failed (ConnectTimeout)."))
+            if connect_timeout:
+                if attempt < 2:
+                    time.sleep(0.25 * (attempt + 1))
+                    continue
+                raise SpawnError("oauth_connection_timeout", "Hermes could not connect to SPAWN's sign-in service.",
+                                 retryable=True, fix="Try /spawn status again. Your existing sign-in is preserved.") from None
+            raise SpawnError(getattr(exc, "code", "oauth_error"), "Hermes could not use the SPAWN grant.", fix=SIGN_IN) from None
+        except PermissionError:
+            raise SpawnError("provider_permission_denied", "Enable the installed plugin and use its declared SPAWN OAuth grant.") from None
 
 
 class SpawnClient:
@@ -98,30 +111,36 @@ class SpawnClient:
         self._initialized = False
 
     def upload_game_package(self, upload_id, content):
-        """Use native JSON credentials for one exact, already reserved package."""
+        return self._upload_bytes(upload_id, content, "game-package", 2 * 1024 * 1024)
+
+    def upload_file(self, upload_id, content):
+        return self._upload_bytes(upload_id, content, "file", 5 * 1024 * 1024)
+
+    def _upload_bytes(self, upload_id, content, route, limit):
+        """Fixed native-credential bridge; no token, URL or raw body escape hatch."""
         if not isinstance(upload_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", upload_id):
             raise SpawnError("invalid_id", "Expected a SPAWN upload identifier.")
-        if not isinstance(content, bytes) or not 0 < len(content) <= 2 * 1024 * 1024:
-            raise SpawnError("request_too_large", "Game packages must contain at most 2 MiB of bytes.")
-        url = "https://spawnbackrooms.com/api/v1/external-work/uploads/" + upload_id + "/game-package"
+        if not isinstance(content, bytes) or not 0 < len(content) <= limit:
+            raise SpawnError("request_too_large", "File bytes exceed this upload route's bound.")
+        url = "https://spawnbackrooms.com/api/v1/external-work/uploads/" + upload_id + "/" + route
         try:
             response = self._request("spawn", "PUT", url, json={"content_base64": base64.b64encode(content).decode("ascii")},
                                      headers={"Accept": "application/json", "Content-Type": "application/json"}, timeout=30.0)
         except SpawnError:
             raise
         except Exception:
-            raise SpawnError("transport_error", "SPAWN did not confirm the package upload.", uncertain=True) from None
+            raise SpawnError("transport_error", "SPAWN did not confirm the file upload.", uncertain=True) from None
         status = response.status
         if 300 <= status < 400:
             raise SpawnError("redirect_refused", "SPAWN redirected the upload. No redirect was followed.", uncertain=True)
         if status == 401:
             raise mapped_error({}, status=status)
         if len(response.text.encode("utf-8")) > MAX_RESPONSE_BYTES:
-            raise SpawnError("response_too_large", "SPAWN returned too much package metadata.", uncertain=True)
+            raise SpawnError("response_too_large", "SPAWN returned too much file metadata.", uncertain=True)
         try:
             payload = json.loads(response.text)
         except (ValueError, TypeError):
-            raise SpawnError("invalid_response", "SPAWN did not confirm the uploaded package.", uncertain=True) from None
+            raise SpawnError("invalid_response", "SPAWN did not confirm the uploaded file.", uncertain=True) from None
         if not 200 <= status < 300:
             raise mapped_error(payload, status=status, uncertain=status >= 500)
         if not isinstance(payload, dict):

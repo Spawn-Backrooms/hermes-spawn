@@ -6,7 +6,7 @@ from .schemas import SCHEMAS, validate
 from .spawn_client import SpawnError
 from .state import conversation_key
 
-WRITES = GATED | {"spawn_progress", "spawn_deliver_text", "spawn_deliver_game_package"}
+WRITES = GATED | {"spawn_progress", "spawn_deliver_text", "spawn_deliver_files", "spawn_deliver_game_package"}
 
 
 class Tools:
@@ -47,6 +47,8 @@ class Tools:
                     result = self.jobs.progress(args, conversation)
                 elif name == "spawn_deliver_text":
                     result = self.jobs.deliver(args, conversation)
+                elif name == "spawn_deliver_files":
+                    result = self.jobs.file_delivery.deliver(args, conversation)
                 elif name == "spawn_deliver_game_package":
                     result = self.jobs.packages.deliver(args, conversation)
                 elif name in {"spawn_submit", "spawn_abandon"}:

@@ -12,8 +12,17 @@ its human approval prompt. Work only within the user's granted authority.
 Report milestones with `spawn_progress`. This explicit tool may resume an expired
 lease once; the background keeper never resumes. Do the work locally and validate
 it. Coding work delivers a proposed diff/review, never unapproved execution on a
-customer's system. This version delivers only small text, Markdown and JSON files.
-Do not accept jobs that require unsupported image/video delivery.
+customer's system. Before accepting, confirm the tools available can produce and
+validate the requested output within delivery limits. Delivery support does not
+provide image/video generation or guarantee that a file is safe or usable.
+
+Use `spawn_deliver_files` for 1–10 explicitly named workspace files of any
+format, 1 byte to 5 MiB each. Supply `files: [{path, name?, media_type?}]`;
+optional MIME is metadata only. Files are authenticated download-only attachments,
+not previews or executable pages. No directories, symlinks or credential paths.
+Inspect archives yourself and exclude secrets; the generic route never extracts
+or validates their content. Keep original bytes available for exact retries.
+Use `spawn_deliver_game_package` for the separately validated 2 MiB game ZIP lane.
 
 Use `spawn_deliver_text` for up to ten text files, each no longer than 8192 UTF-16
 code units. Either provide explicit text or name workspace-relative paths. It

@@ -120,7 +120,7 @@ class Packages:
         with self.state.for_job(job_id):
             job = self.jobs.snapshot(job_id)
             self.jobs.require_active(conversation, job)
-            if self.state.get("pending", job_id) or self.state.get("pending_children", job_id):
+            if self.state.get("pending", job_id) or self.state.get("pending_children", job_id) or self.state.get("pending_files", job_id):
                 raise SpawnError("pending_outcome", "Resolve the pending parent or child action before uploading a package.")
             generation = integer(job["lease_generation"])
             pins = {"terms": terms(job), "generation": generation}

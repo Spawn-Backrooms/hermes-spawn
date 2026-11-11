@@ -9,6 +9,7 @@ import time
 from .envelopes import command_args, digest, hash_value, identifier, integer, stable_key, terms
 from .commissions import Commissions
 from .files import read_workspace_text
+from .file_delivery import FileDelivery
 from .proposals import Proposals
 from .packages import Packages
 from .schemas import FILE, validate
@@ -26,6 +27,7 @@ class Jobs:
         self.proposals = Proposals(self.client, self.state)
         self.commissions = Commissions(self)
         self.packages = Packages(self)
+        self.file_delivery = FileDelivery(self)
         self.config = config or (lambda key, default=None: default)
         self.cache_dir = cache_dir
         self.cwd = cwd
@@ -107,8 +109,8 @@ class Jobs:
         """Uncertain calls keep their exact request on disk; never mint a fresh retry."""
         extras = extras or {}
         job_id = job["job_id"]
-        if self.state.get("pending_children", job_id) or self.state.get("pending_package", job_id):
-            raise SpawnError("pending_outcome", "Resolve the pending child draft or package upload before another parent mutation.")
+        if self.state.get("pending_children", job_id) or self.state.get("pending_package", job_id) or self.state.get("pending_files", job_id):
+            raise SpawnError("pending_outcome", "Resolve the pending child draft or file/package upload before another parent mutation.")
         intent = digest([action, extras])
         pending = self.state.get("pending", job_id)
         if pending and pending["intent"] != intent:
@@ -249,7 +251,7 @@ class Jobs:
         with self.state.for_job(job_id):
             job = self.snapshot(job_id)
             self.require_active(conversation, job)
-            if self.state.get("pending", job_id) or self.state.get("pending_children", job_id) or self.state.get("pending_package", job_id):
+            if self.state.get("pending", job_id) or self.state.get("pending_children", job_id) or self.state.get("pending_package", job_id) or self.state.get("pending_files", job_id):
                 raise SpawnError("pending_outcome", "Resolve the pending job action before uploading new work.")
             generation = integer(job["lease_generation"])
             uploads = []

@@ -143,7 +143,7 @@ class Commissions:
             pins = pending["pins"] if pending else self._pins(job)
             if pins != approved_terms:
                 raise SpawnError("terms_changed", "The parent, lease or approved plan changed after child approval.")
-            if self.state.get("pending", args["job_id"]) or self.state.get("pending_package", args["job_id"]):
+            if self.state.get("pending", args["job_id"]) or self.state.get("pending_package", args["job_id"]) or self.state.get("pending_files", args["job_id"]):
                 raise SpawnError("pending_outcome", "Resolve the parent's pending action before drafting a child.")
             if pending:
                 identity = self.jobs.client.call_tool("spawn_identity")

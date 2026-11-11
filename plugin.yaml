@@ -2,7 +2,7 @@ name: spawn-backrooms
 version: "0.1.0"
 manifest_version: 2
 api_version: 1
-description: Give Hermes an assigned SPAWN job queue plus buyer proposals, reviewed child drafts and verified game packages, with exact approvals and a read-only Desktop pane.
+description: Give Hermes an assigned SPAWN job queue plus buyer proposals, reviewed child drafts and verified file deliverables, with exact approvals and a read-only Desktop pane.
 author: SPAWN
 license: MIT
 homepage: https://github.com/Spawn-Backrooms/hermes-spawn
@@ -44,6 +44,7 @@ provides_tools:
   - spawn_accept
   - spawn_progress
   - spawn_deliver_text
+  - spawn_deliver_files
   - spawn_submit
   - spawn_abandon
   - spawn_earnings

@@ -17,6 +17,8 @@ def array(item, minimum=0, maximum=10):
 
 CAPS = {**array({"type": "string", "enum": CAPABILITIES}, 1, 4), "uniqueItems": True}
 FILE = obj({"name": {**string(160), "pattern": r"^[^\x00-\x1f\x7f/\\]+$"}, "media_type": {"type": "string", "enum": ["text/plain", "text/markdown", "application/json"]}, "text": string(8192)}, ("name", "media_type", "text"))
+DELIVERY_FILE = obj({"path": string(1000), "name": FILE["properties"]["name"],
+                     "media_type": {**string(127), "pattern": r"^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"}}, ("path",))
 MICRO_USDC = {"type": "string", "pattern": r"^(0|[1-9][0-9]{0,18})$", "maxLength": 19}
 EPOCH_MS = {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
 NATIVE_HASH = {"type": "string", "pattern": r"^sha256:[a-f0-9]{64}$"}
@@ -56,8 +58,9 @@ DEFINITIONS = {
     "spawn_accept": ("Accept an owner-approved funded assigned job after human approval of exact terms.", obj({"job_id": ID}, ("job_id",))),
     "spawn_progress": ("Renew the active lease and report a milestone. Explicitly resumes an expired lease once if needed.", obj({"job_id": ID, "message": string(2048), "waiting_for_input": {"type": "boolean"}}, ("job_id", "message", "waiting_for_input"))),
     "spawn_deliver_text": ("Upload 1-10 small text files and finalize a verified manifest, without submitting. Supply files OR workspace-relative paths; no symlinks or credential files.", obj({"job_id": ID, "files": array(FILE, 1), "paths": array(string(1000), 1)}, ("job_id",))),
+    "spawn_deliver_files": ("Deliver 1-10 explicitly named workspace files of any format, 1 byte to 5 MiB each, as authenticated download-only attachments. Optional media_type is descriptive metadata, never permission to execute or preview. No directories, symlinks or credential paths. Verifies bytes and manifest, then submit separately.", obj({"job_id": ID, "files": array(DELIVERY_FILE, 1, 10)}, ("job_id", "files"))),
     "spawn_deliver_game_package": ("Upload a verified game ZIP from one workspace-relative path under the active job and lease; finalize its manifest without submitting. At most 2 MiB, 128 ZIP_STORED files, root index.html, no symlinks. Buyer downloads as an authenticated attachment and runs locally.", obj({"job_id": ID, "path": string(1000)}, ("job_id", "path"))),
-    "spawn_submit": ("Submit a manifest previously produced by spawn_deliver_text or spawn_deliver_game_package in this conversation, after human approval. Does not accept customer review or credit earnings.", obj({"job_id": ID, "manifest_hash": HASH}, ("job_id", "manifest_hash"))),
+    "spawn_submit": ("Submit a manifest previously produced by spawn_deliver_text, spawn_deliver_files or spawn_deliver_game_package in this conversation, after human approval. Does not accept customer review or credit earnings.", obj({"job_id": ID, "manifest_hash": HASH}, ("job_id", "manifest_hash"))),
     "spawn_abandon": ("Abandon current unsubmitted work after human approval; SPAWN reconciles its held budget.", obj({"job_id": ID, "reason": string(2048)}, ("job_id", "reason"))),
     "spawn_earnings": ("Read recorded earnings. Withdrawals are unavailable; no payout is promised.", obj()),
     "spawn_create_backroom": ("Create a private Backroom after approval. Cannot publish, price, mint tokens or move funds.", obj({"kind": {"type": "string", "enum": ["coding", "art", "video", "research", "live_avatar"]}, "name": string(100), "description": string(2048, 0), "brief": string(16384, 0), "config": {"type": "object"}}, ("kind", "name", "description", "brief"))),
