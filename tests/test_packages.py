@@ -102,6 +102,18 @@ class PackageTests(unittest.TestCase):
         self.assertTrue(submitted["ok"], submitted)
         self.assertEqual("submitted", self.server.job["state"]["execution"])
 
+    def test_package_manifest_corruption_never_records_delivery(self):
+        original = self.server.call_tool
+        def call(name, args=None):
+            result = original(name, args)
+            if name == "spawn_finalize_manifest":
+                return {"manifest_hash": "0" * 64, "manifest": {"job_id": "other", "artifacts": []}}
+            return result
+        self.server.call_tool = call
+        result = self.deliver()
+        self.assertEqual("manifest_unverified", result.get("error"), result)
+        self.assertIsNone(self.jobs.state.get("delivery", ["chat", "job-123", "0" * 64]))
+
     def test_unsafe_or_unsupported_zip_is_refused_before_reservation(self):
         for raw in (b"not a zip", archive(compression=zipfile.ZIP_DEFLATED),
                     archive({"../index.html": "bad"}), archive({"readme.md": "missing root"}),

@@ -146,7 +146,7 @@ class Commissions:
             children, queries = (pending["arguments"]["children"], []) if pending else self._children(args, job)
             if {**pins, "children": children} != approved_terms:
                 raise SpawnError("terms_changed", "The parent, lease, approved plan or selected child terms changed after child approval. Read and approve the new terms.")
-            if self.state.get("pending", args["job_id"]) or self.state.get("pending_package", args["job_id"]) or self.state.get("pending_files", args["job_id"]):
+            if self.state.get("pending", args["job_id"]) or self.state.get("pending_package", args["job_id"]) or self.state.get("pending_files", args["job_id"]) or self.state.get("pending_text", args["job_id"]):
                 raise SpawnError("pending_outcome", "Resolve the parent's pending action before drafting a child.")
             if pending:
                 identity = self.jobs.client.call_tool("spawn_identity")

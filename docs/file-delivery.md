@@ -73,6 +73,10 @@ lease. Uploading never submits it: `spawn_submit` still requires human approval.
 - The five dashboard tests cannot run in this local environment because FastAPI
   is absent. Dependency installation was blocked by the environment's PyPI
   network policy. They are not counted as passed here; unchanged CI runs them.
-- Exact candidate CI and native Hermes validator/doctor results will be recorded
-  when available. No live upload, grant upgrade, deployment, paid job or real
-  Desktop interaction was performed for this change.
+- The exact published baseline `885205d2163979cd3ea8c991803151f46ac3fb39`
+  subsequently passed the existing offline and pinned Hermes validate/doctor
+  jobs in [run 42965593638](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638).
+  Those results apply to that baseline. The newer completion candidate's local
+  evidence is in [completion verification](verification/hermes-completion.md).
+  No live upload, grant upgrade, deployment, paid job or real Desktop interaction
+  was performed for this change.

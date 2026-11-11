@@ -234,6 +234,51 @@ class ChildTests(unittest.TestCase):
         self.assertTrue(status["ok"], status)
         self.assertEqual(result["draft_id"], status["draft_id"])
 
+    def test_additive_lifecycle_preserves_exact_draft_and_read_only_successor_status(self):
+        self.server.job["child_commission_plan"]["slots"][0]["max_correction_attempts"] = 1
+        self.jobs.snapshot("job-123")
+        self.discover()
+        args = child_args()
+        gate = self.hooks.pre_tool_call("spawn_draft_child_commissions", args, conversation_id="chat")
+        self.assertEqual("approve", gate and gate.get("action"))
+        draft_id = "external_children_" + "1" * 40
+        successor_id = "external_children_" + "2" * 40
+        lifecycle = {
+            "authority": {"expected_parent_revision": 17, "lease_generation": 8,
+                          "accepted_terms_hash": "d" * 64, "plan_hash": "e" * 64},
+            "current_draft_id": draft_id, "generation": 0, "is_current": True, "transition": None,
+            "cap_micro_usdc": "2000000", "spent_micro_usdc": "0", "reserved_micro_usdc": "0",
+            "remaining_micro_usdc": "2000000", "max_correction_attempts": 1, "correction_attempts": 0,
+            "next_action": "continue", "history": [{"draft_id": draft_id, "generation": 0,
+                "reason": "initial", "predecessor_draft_id": None, "state": "awaiting_native_review",
+                "charged_micro_usdc": "0", "reserved_micro_usdc": "0"}]}
+        original = self.server.call_tool
+        def call(name, arguments=None):
+            result = original(name, arguments)
+            if name in ("spawn_draft_child_commissions", "spawn_get_child_commissions"):
+                result["children"][0]["lifecycle"] = copy.deepcopy(lifecycle)
+            return result
+        self.server.call_tool = call
+        drafted = self.run_tool("spawn_draft_child_commissions", args)
+        self.assertTrue(drafted["ok"], drafted)
+        self.assertEqual(lifecycle, drafted["children"][0]["lifecycle"])
+        lifecycle.update(current_draft_id=successor_id, generation=1, is_current=False,
+                         next_action="superseded", spent_micro_usdc="500000", remaining_micro_usdc="1500000",
+                         correction_attempts=1)
+        lifecycle["history"][0].update(state="revision_requested", charged_micro_usdc="500000",
+                                       result_hash="4" * 64, review_hash="5" * 64, review_decision="revise")
+        lifecycle["history"].append({"draft_id": successor_id, "generation": 1, "reason": "request_correction",
+                                     "predecessor_draft_id": draft_id, "state": "awaiting_native_review",
+                                     "charged_micro_usdc": "0", "reserved_micro_usdc": "0"})
+        before = len(self.server.calls)
+        status = self.run_tool("spawn_get_child_commissions", {"job_id": "job-123", "draft_id": draft_id})
+        self.assertTrue(status["ok"], status)
+        self.assertEqual(draft_id, status["draft_id"])
+        self.assertEqual(lifecycle, status["children"][0]["lifecycle"])
+        self.assertEqual(["spawn_get_job", "spawn_get_child_commissions"],
+                         [name for name, _ in self.server.calls[before:]])
+        self.assertEqual(1, len(self.server.child_writes()))
+
     def test_malformed_draft_receipt_keeps_pending_and_blocks_other_job_writes(self):
         self.discover()
         args = child_args()

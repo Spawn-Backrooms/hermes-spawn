@@ -201,6 +201,7 @@ class FileDeliveryTests(unittest.TestCase):
         self.assertIsNotNone(self.jobs.state.get("pending_files", "job-123"))
 
     def test_expired_uncertain_batch_releases_only_local_artifact_recovery(self):
+        self.jobs.state.set("job_owner", "job-123", "chat")
         (self.root / "output.bin").write_bytes(b"abc")
         for error in ("LEASE_EXPIRED", "ARTIFACT_LEASE_STALE", "LEASE_GENERATION_STALE", "UPLOAD_EXPIRED"):
             self.server.fail_once["upload_game_package"] = SpawnError("transport_error", uncertain=True)

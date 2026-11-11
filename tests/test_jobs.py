@@ -3,6 +3,7 @@ from unittest.mock import Mock
 
 from tests.support import load
 from tests.fake_jobs import FakeSpawn, SpawnError
+from tests.fake_proposals import MemoryBackend
 
 Jobs = load("jobs").Jobs
 terms = load("envelopes").terms
@@ -28,6 +29,100 @@ class JobsTests(unittest.TestCase):
         self.assertEqual(17, sent["envelope"]["expected_revision"])
         self.assertEqual(9, sent["offer_revision"])
         self.assertEqual(4, sent["grant_epoch"])
+
+    def test_acknowledged_accept_recovers_after_restart_without_new_accept(self):
+        backend = MemoryBackend()
+        self.jobs.state = load("state").State(backend=backend)
+        original = self.server.call_tool
+        fail = [False]
+        def call(name, args=None):
+            if name == "spawn_get_job" and fail[0]:
+                fail[0] = False
+                raise SpawnError("transport_error", uncertain=True)
+            result = original(name, args)
+            if name == "spawn_accept_job":
+                fail[0] = True
+            return result
+        self.server.call_tool = call
+        accepted = self.activate()
+        self.assertIn("warning", accepted)
+        state = load("state").State(backend=backend)
+        self.jobs = Jobs(client=self.server, state=state, config=lambda key, default=None: False)
+        self.jobs.job("job-123", "chat-a")
+        self.jobs.progress({"job_id": "job-123", "message": "Continue", "waiting_for_input": False}, "chat-a")
+        self.assertEqual(1, sum(name == "spawn_accept_job" for name, _ in self.server.calls))
+        self.assertIsNone(state.get("pending", "job-123"))
+
+    def test_acknowledged_accept_recovery_refuses_changed_authority_or_owner(self):
+        for change in ("conversation", "grant_epoch", "installation_id", "quote_hash", "lease_generation", "terminal"):
+            with self.subTest(change=change):
+                self.setUp()
+                original = self.server.call_tool
+                def call(name, args=None):
+                    if name == "spawn_get_job" and self.server.receipts:
+                        raise SpawnError("transport_error", uncertain=True)
+                    return original(name, args)
+                self.server.call_tool = call
+                self.activate()
+                self.server.call_tool = original
+                if change in ("grant_epoch", "lease_generation"):
+                    self.server.job[change] += 1
+                elif change in ("installation_id", "quote_hash"):
+                    self.server.job[change] = "f" * 64
+                elif change == "terminal":
+                    self.server.job["state"]["execution"] = "cancelled"
+                with self.assertRaises(SpawnError):
+                    self.jobs.job("job-123", "chat-b" if change == "conversation" else "chat-a")
+                self.assertIsNone(self.jobs.state.get("active", "chat-a"))
+                self.assertEqual(1, len(self.server.mutations()))
+
+    def test_acknowledged_resume_recovers_after_restart_without_new_resume(self):
+        backend = MemoryBackend()
+        self.jobs.state = load("state").State(backend=backend)
+        self.activate()
+        original = self.server.call_tool
+        expired, lost = [False], [False]
+        def call(name, args=None):
+            if name == "spawn_heartbeat" and not expired[0]:
+                expired[0] = True
+                raise SpawnError("LEASE_EXPIRED")
+            if name == "spawn_get_job" and lost[0]:
+                lost[0] = False
+                raise SpawnError("transport_error", uncertain=True)
+            result = original(name, args)
+            if name == "spawn_resume_job":
+                lost[0] = True
+            return result
+        self.server.call_tool = call
+        args = {"job_id": "job-123", "message": "Continue", "waiting_for_input": False}
+        with self.assertRaises(SpawnError):
+            self.jobs.progress(args, "chat-a")
+        self.jobs = Jobs(client=self.server, state=load("state").State(backend=backend), config=lambda key, default=None: False)
+        self.jobs.progress(args, "chat-a")
+        self.assertEqual(1, sum(name == "spawn_resume_job" for name, _ in self.server.calls))
+        self.assertEqual(self.server.job["lease_generation"], self.jobs.state.get("active", "chat-a")["lease_generation"])
+
+    def test_malformed_accept_acknowledgment_recovers_original_request(self):
+        for revision in (None, True, "18", 17):
+            with self.subTest(revision=revision):
+                self.setUp()
+                original = self.server.call_tool
+                corrupt = [True]
+                def call(name, args=None):
+                    result = original(name, args)
+                    if name == "spawn_accept_job" and corrupt[0]:
+                        corrupt[0] = False
+                        return {"revision": revision}
+                    return result
+                self.server.call_tool = call
+                with self.assertRaises(SpawnError) as caught:
+                    self.activate()
+                self.assertEqual("acknowledgment_unverified", caught.exception.code)
+                self.assertTrue(caught.exception.uncertain)
+                self.activate()
+                sent = [args for name, args in self.server.calls if name == "spawn_accept_job"]
+                self.assertEqual(sent[0], sent[1])
+                self.assertEqual(1, len(self.server.receipts))
 
     def test_terms_change_after_approval_sends_no_mutation(self):
         approved = terms(self.server.job)
@@ -167,6 +262,20 @@ class JobsTests(unittest.TestCase):
         self.jobs.finish("submit", {"job_id": "job-123", "manifest_hash": result["manifest_hash"]}, "chat-a", terms(self.server.job))
         self.assertIsNone(self.jobs.state.get("active", "chat-a"))
 
+    def test_text_manifest_corruption_never_records_delivery(self):
+        self.activate()
+        original = self.server.call_tool
+        def call(name, args=None):
+            result = original(name, args)
+            if name == "spawn_finalize_manifest":
+                return {"manifest_hash": "0" * 64, "manifest": {"job_id": "other", "artifacts": []}}
+            return result
+        self.server.call_tool = call
+        with self.assertRaises(SpawnError) as caught:
+            self.deliver()
+        self.assertEqual("manifest_unverified", caught.exception.code)
+        self.assertIsNone(self.jobs.state.get("delivery", ["chat-a", "job-123", "0" * 64]))
+
     def test_duplicate_upload_retry_reuses_keys_and_ids(self):
         self.activate()
         first = self.deliver()
@@ -180,7 +289,7 @@ class JobsTests(unittest.TestCase):
         self.server.corrupt_upload = True
         with self.assertRaises(SpawnError) as caught:
             self.deliver()
-        self.assertEqual("upload_hash_mismatch", caught.exception.code)
+        self.assertEqual("upload_authority_mismatch", caught.exception.code)
         self.assertNotIn("spawn_finalize_manifest", [name for name, _ in self.server.calls])
 
     def test_duplicate_filenames_refused_before_upload(self):

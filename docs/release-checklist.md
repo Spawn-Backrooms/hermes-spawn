@@ -2,6 +2,25 @@
 
 This is a development preview, not a submission-ready claim.
 
+## Evidence scope for the completion candidate
+
+The completion work starts at plugin source
+`885205d2163979cd3ea8c991803151f46ac3fb39`. The local acceptance/recovery and
+artifact-verification results are recorded in
+[completion verification](verification/hermes-completion.md). Historical native
+runtime runs below qualify their exact listed commits, not this candidate.
+
+- [x] Reproduce and repair the acknowledged acceptance and resume recovery gaps.
+- [x] Verify exact manifests and retained upload identities on all delivery lanes.
+- [x] Bundle the proposal, art-first, actual-source QA and delivery workflow.
+- [ ] Validate and run doctor on the exact final plugin commit with the pinned Hermes runtime.
+- [ ] Record the exact plugin/server source pair and configuration used by the composed driver.
+- [ ] Run complete art, successful actual-source QA, reviewed receipts, buyer download and settlement qualification.
+
+Local tests, native runtime compatibility, composed offline qualification and a
+real funded buyer journey are distinct evidence. Keep their source pins and
+results separate. No new GitHub CI or deployment workflow is required.
+
 ## Local build
 
 - [x] Native plugin, 21 tools, exact tool declarations and 2 hooks implemented.
@@ -20,6 +39,10 @@ Hermes v0.23.1's official release commit was verified as
 on the recovered baseline `7953f81cbb693f17eb0546cc4399a147e3ed7c41`.
 The dungeon candidate independently passed both checks in the unchanged existing
 workflow, [run 42897894544](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42897894544).
+The any-format baseline `885205d2163979cd3ea8c991803151f46ac3fb39` also passed
+its existing offline and Hermes compatibility jobs in
+[run 42965593638](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638),
+using the same pinned official Hermes runtime. This is baseline evidence only.
 The Hermes runtime is unavailable locally. Actual OAuth/interactive Desktop and
 final catalog pin checks remain separate.
 
@@ -96,7 +119,7 @@ local build. See [catalog rules](https://hermes-agent.nousresearch.com/docs/deve
 - [x] Explicit regular-file reads, 5 MiB bound, exact descriptors and canonical manifest verification.
 - [x] Retained batch identity and retry keys survive uncertain upload/finalization outcomes.
 - [x] Existing game/text lanes, human submission approval and main OAuth retry preserved.
-- [ ] Exact candidate full CI, native validator and doctor recorded in docs/file-delivery.md.
+- [ ] Record final-candidate compatibility evidence with its exact head SHA; do not reuse an older candidate result.
 - [ ] Companion backend released through its existing approval and release gates.
 - [ ] Real buyer upload/download hash comparison and Desktop interaction qualified.
 

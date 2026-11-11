@@ -1,9 +1,32 @@
 # Dungeon tools and explicit upgrade
 
+The bundled [work-a-job skill](../skills/work-a-job/SKILL.md) contains the complete
+agent workflow, including separate art-first and actual-source QA drafts. Keep
+each returned draft ID and wait for designated output review before consuming it.
+The completion candidate also applies one exact artifact verifier to text, game
+and opaque files. See [completion verification](verification/hermes-completion.md)
+for the local regression evidence and its limits.
+
 The existing assigned-job and text delivery preview remains available in its
 original pinned release. This candidate adds eight bounded tools without changing
 Desktop styling, the text-file limits, the MCP body cap or model-provider settings.
 The plugin makes no independent model calls; the project retains OpenRouter.
+
+## Read-only readiness
+
+`spawn_status` includes a validated `readiness` projection from the authenticated
+`spawn_identity.workflow_readiness` response. It reports assigned-work readiness
+separately from full workflow readiness across assigned work, proposals, children
+and delivery. Feature states distinguish disabled rollout, missing scopes and
+unavailable services. The projection includes current installation/grant identity,
+observation time and server delivery limits.
+
+`hermes spawn doctor` fails full readiness when that projection is missing,
+malformed, belongs to another installation/grant, or any required feature is not
+ready. It still reports identity, beta access and assigned-work diagnostics.
+An older server can therefore support assigned-job reads while failing the full
+collaboration check. Readiness does not quote, fund, allocate, execute, approve
+or submit any work. Actual job funding and review waits remain job state.
 
 ## Native OAuth upgrade
 
