@@ -1,4 +1,6 @@
 import unittest
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock
 
 from tests.support import load
@@ -7,6 +9,220 @@ from tests.fake_proposals import MemoryBackend
 
 Jobs = load("jobs").Jobs
 terms = load("envelopes").terms
+
+
+class AcceptanceReservationTests(unittest.TestCase):
+    def setUp(self):
+        self.servers = {job_id: FakeSpawn() for job_id in ("job_a", "job_b")}
+        for job_id, server in self.servers.items():
+            server.job["job_id"] = job_id
+        self.backend = MemoryBackend()
+        self.client = Mock()
+        self.client.call_tool.side_effect = self.route
+        self.restart()
+
+    def route(self, name, args=None):
+        return self.servers[args["job_id"]].call_tool(name, args)
+
+    def restart(self):
+        self.jobs = Jobs(client=self.client, state=load("state").State(backend=self.backend),
+                         config=lambda key, default=None: False if key == "lease_keeper" else default)
+
+    def accept(self, job_id, conversation="chat"):
+        return self.jobs.accept({"job_id": job_id}, conversation, terms(self.servers[job_id].job))
+
+    def crash_during_write(self, kind, value, *, after):
+        class Crash(BaseException):
+            pass
+
+        original = self.backend.set
+
+        def write(key, stored):
+            matches = key.startswith(kind + ":") and stored == value
+            if matches and not after:
+                raise Crash()
+            original(key, stored)
+            if matches:
+                raise Crash()
+
+        self.backend.set = write
+        return Crash, original
+
+    def test_every_admission_write_cut_retains_recoverable_conversation_ownership(self):
+        for kind, value in (("job_owner", "chat"), ("pending_accept", "job_a")):
+            for after in (False, True):
+                with self.subTest(kind=kind, after=after):
+                    self.setUp()
+                    crash, original = self.crash_during_write(kind, value, after=after)
+                    with self.assertRaises(crash):
+                        self.accept("job_a")
+                    self.backend.set = original
+                    self.restart()
+                    self.assertEqual([], self.servers["job_a"].mutations())
+                    if self.jobs.state.get("job_owner", "job_a"):
+                        with self.assertRaises(SpawnError) as caught:
+                            self.accept("job_a", "other_chat")
+                        self.assertEqual("active_elsewhere", caught.exception.code)
+                        self.accept("job_a")
+                        self.assertEqual("job_a", self.jobs.state.get("active", "chat")["job_id"])
+                        self.assertIsNone(self.jobs.state.get("pending_accept", "chat"))
+                    else:
+                        self.assertIsNone(self.jobs.state.get("pending_accept", "chat"))
+                        self.accept("job_a", "other_chat")
+                        self.accept("job_b")
+                        self.assertEqual("job_b", self.jobs.state.get("active", "chat")["job_id"])
+
+    def test_every_definitive_cleanup_cut_can_recover_without_stranding_reservation(self):
+        for kind in ("pending_accept", "job_owner"):
+            for after in (False, True):
+                with self.subTest(kind=kind, after=after):
+                    self.setUp()
+
+                    def reject(name, args=None):
+                        if name == "spawn_accept_job":
+                            raise SpawnError("EXTERNAL_TERMS_STALE")
+                        return self.route(name, args)
+
+                    self.client.call_tool.side_effect = reject
+                    crash, original = self.crash_during_write(kind, None, after=after)
+                    with self.assertRaises(crash):
+                        self.accept("job_a")
+                    self.backend.set = original
+                    self.client.call_tool.side_effect = self.route
+                    self.restart()
+                    self.assertEqual([], self.servers["job_a"].mutations())
+                    if self.jobs.state.get("pending_accept", "chat"):
+                        self.assertEqual("chat", self.jobs.state.get("job_owner", "job_a"))
+                        with self.assertRaises(SpawnError) as caught:
+                            self.accept("job_a", "other_chat")
+                        self.assertEqual("active_elsewhere", caught.exception.code)
+                        self.accept("job_a")
+                        self.assertIsNone(self.jobs.state.get("pending_accept", "chat"))
+                    else:
+                        self.accept("job_b")
+                        self.assertEqual("job_b", self.jobs.state.get("active", "chat")["job_id"])
+
+    def test_concurrent_accept_reserves_conversation_before_server_response(self):
+        entered, release = threading.Event(), threading.Event()
+
+        def call(name, args=None):
+            if name == "spawn_accept_job" and args["job_id"] == "job_a":
+                entered.set()
+                if not release.wait(timeout=3):
+                    raise AssertionError("Test did not release acceptance")
+            return self.route(name, args)
+
+        self.client.call_tool.side_effect = call
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            first = pool.submit(self.accept, "job_a")
+            try:
+                self.assertTrue(entered.wait(timeout=3))
+                with self.assertRaises(SpawnError) as caught:
+                    self.accept("job_b")
+                self.assertEqual("pending_outcome", caught.exception.code)
+                self.assertEqual([], self.servers["job_b"].mutations())
+            finally:
+                release.set()
+            self.assertNotIn("warning", first.result(timeout=3))
+        self.assertEqual("job_a", self.jobs.state.get("active", "chat")["job_id"])
+        self.assertIsNone(self.jobs.state.get("pending_accept", "chat"))
+
+    def test_unresolved_accept_survives_restart_and_blocks_another_job(self):
+        self.servers["job_a"].fail_once["spawn_accept_job"] = SpawnError("transport_error", uncertain=True)
+        with self.assertRaises(SpawnError):
+            self.accept("job_a")
+        pending = self.jobs.state.get("pending", "job_a")
+        self.restart()
+        with self.assertRaises(SpawnError) as caught:
+            self.accept("job_b")
+        self.assertEqual("pending_outcome", caught.exception.code)
+        self.assertEqual([], self.servers["job_b"].mutations())
+        self.assertEqual(pending, self.jobs.state.get("pending", "job_a"))
+        self.accept("job_a")
+        sent = [args for name, args in self.servers["job_a"].calls if name == "spawn_accept_job"]
+        self.assertEqual(sent[0], sent[1])
+        self.assertEqual(1, len(self.servers["job_a"].receipts))
+        self.assertIsNone(self.jobs.state.get("pending_accept", "chat"))
+
+    def test_acknowledged_accept_keeps_reservation_until_read_reconciles(self):
+        lose_read = [False]
+
+        def call(name, args=None):
+            if name == "spawn_get_job" and lose_read[0]:
+                lose_read[0] = False
+                raise SpawnError("transport_error", uncertain=True)
+            result = self.route(name, args)
+            if name == "spawn_accept_job":
+                lose_read[0] = True
+            return result
+
+        self.client.call_tool.side_effect = call
+        self.assertIn("warning", self.accept("job_a"))
+        self.client.call_tool.side_effect = self.route
+        self.restart()
+        with self.assertRaises(SpawnError) as caught:
+            self.accept("job_b")
+        self.assertEqual("pending_outcome", caught.exception.code)
+        self.assertEqual([], self.servers["job_b"].mutations())
+        self.jobs.job("job_a", "chat")
+        self.assertIsNone(self.jobs.state.get("pending_accept", "chat"))
+        self.assertEqual(1, sum(name == "spawn_accept_job" for name, _ in self.servers["job_a"].calls))
+        self.jobs.finish("abandon", {"job_id": "job_a", "reason": "Done"}, "chat", terms(self.servers["job_a"].job))
+        self.accept("job_b")
+        self.assertEqual("job_b", self.jobs.state.get("active", "chat")["job_id"])
+
+    def test_definitive_rejection_releases_conversation_reservation(self):
+        def call(name, args=None):
+            if name == "spawn_accept_job" and args["job_id"] == "job_a":
+                raise SpawnError("EXTERNAL_TERMS_STALE")
+            return self.route(name, args)
+
+        self.client.call_tool.side_effect = call
+        with self.assertRaises(SpawnError):
+            self.accept("job_a")
+        self.assertIsNone(self.jobs.state.get("pending_accept", "chat"))
+        self.assertIsNone(self.jobs.state.get("job_owner", "job_a"))
+        self.accept("job_b")
+        self.assertEqual("job_b", self.jobs.state.get("active", "chat")["job_id"])
+
+    def test_unresolved_accept_does_not_reserve_other_conversations(self):
+        self.servers["job_a"].fail_once["spawn_accept_job"] = SpawnError("transport_error", uncertain=True)
+        with self.assertRaises(SpawnError):
+            self.accept("job_a")
+        self.accept("job_b", "other_chat")
+        self.assertEqual("job_b", self.jobs.state.get("active", "other_chat")["job_id"])
+        self.assertIsNotNone(self.jobs.state.get("pending", "job_a"))
+
+    def test_rejected_reaccept_does_not_leave_a_reservation_after_finishing(self):
+        self.accept("job_a")
+
+        def call(name, args=None):
+            if name == "spawn_accept_job" and args["job_id"] == "job_a":
+                raise SpawnError("EXTERNAL_JOB_STATE_CONFLICT")
+            return self.route(name, args)
+
+        self.client.call_tool.side_effect = call
+        with self.assertRaises(SpawnError):
+            self.accept("job_a")
+        self.assertIsNone(self.jobs.state.get("pending_accept", "chat"))
+        self.assertEqual("chat", self.jobs.state.get("job_owner", "job_a"))
+        self.jobs.finish("abandon", {"job_id": "job_a", "reason": "Done"}, "chat", terms(self.servers["job_a"].job))
+        self.accept("job_b")
+        self.assertEqual("job_b", self.jobs.state.get("active", "chat")["job_id"])
+
+    def test_reaccept_during_uncertain_progress_does_not_block_later_work(self):
+        self.accept("job_a")
+        progress = {"job_id": "job_a", "message": "Working", "waiting_for_input": False}
+        self.servers["job_a"].fail_once["spawn_report_progress"] = SpawnError("transport_error", uncertain=True)
+        with self.assertRaises(SpawnError):
+            self.jobs.progress(progress, "chat")
+        with self.assertRaises(SpawnError) as caught:
+            self.accept("job_a")
+        self.assertEqual("pending_outcome", caught.exception.code)
+        self.jobs.progress(progress, "chat")
+        self.jobs.finish("abandon", {"job_id": "job_a", "reason": "Done"}, "chat", terms(self.servers["job_a"].job))
+        self.accept("job_b")
+        self.assertEqual("job_b", self.jobs.state.get("active", "chat")["job_id"])
 
 
 class JobsTests(unittest.TestCase):

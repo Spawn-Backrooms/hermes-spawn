@@ -172,6 +172,11 @@ class Jobs:
         self.state.set("active", conversation, {"job_id": job["job_id"], "installation_id": job["installation_id"], "lease_generation": job["lease_generation"], "lease_expires_at_ms": job.get("lease_expires_at_ms"), "deadline_at_ms": job["quote"].get("deadline_at_ms"), "title": str(job["quote"].get("deliverable", job["job_id"]))[:100]})
 
         if acknowledged:
+            # Store active authority before releasing the durable reservation.
+            # Another job must never enter this conversation between the two.
+            with self.state.lock:
+                if self.state.get("pending_accept", conversation) == job["job_id"]:
+                    self.state.set("pending_accept", conversation, None)
             self.state.set("pending", job["job_id"], None)
 
     def require_active(self, conversation, job):
@@ -194,15 +199,30 @@ class Jobs:
             job = self.snapshot(job_id)
             if approved_terms != terms(job):
                 raise SpawnError("terms_changed", "Job terms changed after the approval prompt. Read the job and approve again.")
-            active = self.state.get("active", conversation)
-            if active and active["job_id"] != job_id:
-                raise SpawnError("active_job_exists", "This conversation already has an active job. Finish or abandon it first.")
-            self.state.set("job_owner", job_id, conversation)
+            # Different jobs have different locks. Reserve the conversation
+            # atomically before a request can commit, and retain it on disk
+            # until the original acceptance is rejected or reconciled.
+            with self.state.lock:
+                active = self.state.get("active", conversation)
+                if active and active["job_id"] != job_id:
+                    raise SpawnError("active_job_exists", "This conversation already has an active job. Finish or abandon it first.")
+                pending_accept = self.state.get("pending_accept", conversation)
+                if pending_accept and pending_accept != job_id:
+                    raise SpawnError("pending_outcome", "Acceptance of SPAWN job " + pending_accept + " is unresolved in this conversation. Recover that exact acceptance first.")
+                # Every durable reservation must have an owner, including a
+                # crash between writes. An owned unsent job remains retryable.
+                self.state.set("job_owner", job_id, conversation)
+                if not active:
+                    self.state.set("pending_accept", conversation, job_id)
             try:
                 result = self._command(job, "accept")
             except SpawnError as exc:
-                if not exc.uncertain and not active and not self.state.get("pending", job_id):
-                    self.state.set("job_owner", job_id, None)
+                if not exc.uncertain and not self.state.get("pending", job_id):
+                    with self.state.lock:
+                        if self.state.get("pending_accept", conversation) == job_id:
+                            self.state.set("pending_accept", conversation, None)
+                        if not active:
+                            self.state.set("job_owner", job_id, None)
                 raise
             try:
                 job = self.snapshot(job_id)

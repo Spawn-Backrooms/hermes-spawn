@@ -126,3 +126,74 @@ suite passed 183 tests, Desktop smoke passed and `git diff --check` passed. Thes
 offline contract tests were compared with the candidate server schemas in
 `open-job-contracts.ts`, `external-job-children.ts` and
 `external-child-lifecycle-contracts.ts`; they are not a mounted-server run.
+
+## Requirements review: conversation acceptance reservation
+
+An independent review of merged plugin main
+`8876f80d4d410ba0154475b25c320d2b6c24c6a0` found another acceptance window.
+The existing guard considered only a reconciled active job. Two approved accepts
+for different jobs in the same conversation could both reach the server while
+the first acceptance response was pending. Accepting a second job after an
+unknown outcome or lost acknowledgment follow-up read had the same problem.
+Both server jobs could be running while only one had active conversation state.
+
+Acceptance now reserves its conversation durably before sending the command.
+The check and reservation use the existing state lock across different job
+locks. The reservation survives restart, uncertainty and an acknowledged but
+unreconciled response. Only the original job may recover it; a different job
+receives a factual error naming the unresolved job. Successful reconciliation
+stores active authority before releasing the reservation. A definitive rejection
+with no pending command releases it. Existing active work and other conversations
+retain their original behavior.
+
+The first regression run failed the concurrent, unknown-outcome/restart and
+acknowledged-read-loss cases before the fix. Seven focused cases now cover those
+paths, exact request replay, legitimate release after rejection or completion,
+other conversations, rejected reacceptance and reacceptance during uncertain
+progress. The complete Python suite passes **190 tests** on 2026-11-11.
+
+A fresh adversarial review also interrupted every ownership/reservation write
+before and after persistence. It reproduced four failing crash cuts in the
+initial reservation fix. Admission now saves job ownership before reserving the
+conversation; definitive rejection releases the conversation before ownership.
+Every retained reservation therefore has a recoverable original owner. Eight
+write-cut scenarios across restart also test a competing conversation, a fresh
+job and original recovery. This ordering assumes the existing single Hermes
+State/host locking contract; it does not claim cross-process shared-store locks.
+
+These tests use deterministic offline server doubles. They prove the local
+conversation and retry boundaries, not a live server's capacity policy or a
+second paid production acceptance. Current native Hermes approval behavior and
+the final composed plugin/server pair still require their exact-source gates.
+
+The final companion source regression run after the crash-ordering correction
+passes **192 tests**. It includes the two methods exercising all eight durable
+write cuts, in addition to the original seven reservation cases.
+
+## Requirements review: precise QA and delivery instructions
+
+The installed workflow explicitly requests reproducible source-QA findings and
+the dungeon's collision, timing, puzzle, key, exit and reset checks. It preserves
+source, art, QA-export and package SHA-256 hashes, current authenticated child
+approval reads, correction charges and an offline playtest of the selected
+archive's exact bytes. A separate unfamiliar-player timing check remains needed
+when the brief specifies a two-to-three-minute first playthrough.
+
+The 16 KiB child brief limit is an outer export bound. The native quote must also
+fit the actual source and review instructions within its execution budget;
+`NATIVE_CONTEXT_BUDGET_TOO_SMALL` cannot be repaired by silent truncation or an
+unchanged paid retry. Changes after QA require honest coverage reporting and a
+new authorized review when the final-byte acceptance criterion requires it.
+Exactly-two-child work requires a buyer amendment before extra paid executions.
+
+For an accepted scope permitting local fixes after QA, the shipped instructions
+also allow an explicit package mode retaining the reviewed source, final source
+hash, generated diff, fix report and final-byte tests with the original two
+receipts. Such edits remain explicitly independently unreviewed. If the buyer
+requires final-byte independent QA, that narrower acceptance condition still
+requires the matching review before delivery.
+
+A schema check resolves all 17 referenced tool names to existing registered
+tools. Independent UI/game review checked the revised procedure against the
+actual source/export/package contracts. This is instruction and source-contract
+review, not evidence that a fresh Hermes session completed a real funded game.
