@@ -52,6 +52,23 @@ class FilesTests(unittest.TestCase):
         with self.assertRaises(SpawnError):
             files.read_workspace_text(self.root, "directory")
 
+    def test_text_and_binary_share_case_insensitive_credential_path_policy(self):
+        for name in (".ENV", "nested/.Env.local", ".CONFIG/example/credentials.json",
+                     ".gnupg/private.txt", ".SSH/id_rsa", "AUTH.JSON",
+                     "credentials", "Credentials.Json", "id_rsa", "ID_ED25519"):
+            self.write(name, "synthetic-not-a-real-secret")
+            for reader in (files.read_workspace_text, files.read_workspace_bytes):
+                with self.subTest(path=name, reader=reader.__name__):
+                    with self.assertRaises(SpawnError) as caught:
+                        reader(self.root, name)
+                    self.assertEqual("unsafe_path", caught.exception.code)
+
+    def test_path_policy_preserves_ordinary_deliverable_names(self):
+        for name in ("outputs/config.json", "outputs/credentials-guide.md", "outputs/environment.txt"):
+            self.write(name, "ordinary deliverable")
+            self.assertEqual("ordinary deliverable", files.read_workspace_text(self.root, name)["text"])
+            self.assertEqual(b"ordinary deliverable", files.read_workspace_bytes(self.root, name)[1])
+
     def test_leaf_and_parent_symlinks_refused_even_inside_root(self):
         self.write("real/file.txt", "ok")
         (self.root / "leaf.txt").symlink_to(self.root / "real/file.txt")

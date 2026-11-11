@@ -6,12 +6,20 @@ import stat
 from .spawn_client import SpawnError
 
 
-def read_workspace_text(cwd, relative):
+def _workspace_path(relative):
+    """Shared lexical guard; both readers still enforce no-follow handle walks."""
     path = Path(relative)
-    if path.is_absolute() or any(part in {"..", ".git", ".ssh", ".aws", ".codex", ".hermes"} for part in path.parts):
-        raise SpawnError("unsafe_path", "Use a workspace-relative path without traversal or credential directories.")
-    if not path.parts or path.name == "auth.json" or any(p == ".env" or p.startswith(".env.") for p in path.parts):
-        raise SpawnError("unsafe_path", "Credential files cannot be delivered.")
+    blocked = {"..", ".git", ".ssh", ".aws", ".codex", ".hermes", ".gnupg", ".config"}
+    if (not path.parts or path.is_absolute() or "\\" in str(relative) or "\x00" in str(relative) or
+        any(part.casefold() in blocked or part.casefold() == ".env" or
+            part.casefold().startswith(".env.") for part in path.parts) or
+        path.name.casefold() in {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519"}):
+        raise SpawnError("unsafe_path", "Choose an explicit workspace-relative file without traversal or credential paths.")
+    return path
+
+
+def read_workspace_text(cwd, relative):
+    path = _workspace_path(relative)
     if not hasattr(os, "O_NOFOLLOW") or os.open not in os.supports_dir_fd:
         raise SpawnError("safe_path_read_unavailable", "This platform cannot enforce no-symlink reads. Supply explicit text instead.")
     descriptors = []
@@ -47,13 +55,7 @@ MAX_FILE_BYTES = 5 * 1024 * 1024
 
 def read_workspace_bytes(cwd, relative):
     """No globbing, directory walks, symlink traversal, extraction or execution."""
-    path = Path(relative)
-    blocked = {"..", ".git", ".ssh", ".aws", ".codex", ".hermes", ".gnupg", ".config"}
-    if (not path.parts or path.is_absolute() or "\\" in relative or "\x00" in relative or
-        any(part.casefold() in blocked or part.casefold() == ".env" or
-            part.casefold().startswith(".env.") for part in path.parts) or
-        path.name.casefold() in {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519"}):
-        raise SpawnError("unsafe_path", "Choose an explicit workspace-relative file without traversal or credential paths.")
+    path = _workspace_path(relative)
     if not hasattr(os, "O_NOFOLLOW") or os.open not in os.supports_dir_fd:
         raise SpawnError("safe_path_read_unavailable", "This platform cannot enforce no-symlink file reads.")
     descriptors = []
