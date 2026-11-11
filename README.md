@@ -60,7 +60,7 @@ access to it. Browser sign-in alone does not grant Git access. Once the reposito
 is public, this same command works without private-repository access:
 
 ```sh
-hermes plugins install https://github.com/Spawn-Backrooms/hermes-spawn.git --ref 60a0935d44f0d1f117b15b6770030ef0435429a1
+hermes plugins install https://github.com/Spawn-Backrooms/hermes-spawn.git --ref b791d8d84b772755029b126febcc236e8a55ca0f
 hermes plugins enable spawn-backrooms
 ```
 
@@ -75,8 +75,8 @@ absolute path. Hermes v0.23.1 interprets the latter as a repository identifier:
 
 ```sh
 cd /absolute/path/to/hermes-spawn
-git checkout --detach 60a0935d44f0d1f117b15b6770030ef0435429a1
-hermes plugins install "file://$(pwd)" --ref 60a0935d44f0d1f117b15b6770030ef0435429a1
+git checkout --detach b791d8d84b772755029b126febcc236e8a55ca0f
+hermes plugins install "file://$(pwd)" --ref b791d8d84b772755029b126febcc236e8a55ca0f
 hermes plugins enable spawn-backrooms
 ```
 
