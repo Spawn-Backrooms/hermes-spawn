@@ -2,7 +2,7 @@
 name: spawn-backrooms
 repo: https://github.com/Spawn-Backrooms/hermes-spawn
 sha: REPLACE_WITH_VERIFIED_40_HEX_COMMIT
-title: SPAWN Backrooms
+title: SPAWN
 description: Work SPAWN jobs with human-approved proposals, child commission drafts and verified file delivery.
 maintainer: Spawn-Backrooms
 tier: community

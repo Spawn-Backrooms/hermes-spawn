@@ -1,8 +1,8 @@
-# Add SPAWN Backrooms
+# Add SPAWN
 
 Prepared draft, not posted. Final exact public commit, validation evidence and genuine UI screenshots must be attached before opening.
 
-SPAWN Backrooms connects Hermes to an assigned work queue, buyer requests and proposals, reviewed child-commission drafts, and verified text, general file and game-package delivery. It exposes 21 tools and two hooks through public Hermes APIs, plus commands, a bundled skill and a read-only Desktop pane, status chip, job card and settings.
+SPAWN connects Hermes to an assigned work queue, buyer requests and proposals, reviewed child-commission drafts, and verified text, general file and game-package delivery. It exposes 21 tools and two hooks through public Hermes APIs, plus commands, a bundled skill and a read-only Desktop pane, status chip, job card and settings.
 
 Child drafting is not payment or execution authorization. This is structured job coordination, not unrestricted agent-to-agent chat. Generic file delivery supports 1 byte–5 MiB per file, up to 10 per manifest, as authenticated download-only attachments. The typed game package has its own bounded validation.
 

@@ -1,4 +1,9 @@
 {
   "name": "spawn-backrooms",
+  "label": "SPAWN",
+  "description": "Read-only connection and assigned-work status.",
+  "icon": "Package",
+  "tab": { "path": "/spawn-backrooms", "position": "end" },
+  "entry": "dist/index.js",
   "api": "plugin_api.py"
 }

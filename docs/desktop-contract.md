@@ -7,7 +7,7 @@ Verified against the official documentation on 2026-11-10:
 - [Dashboard API](https://hermes-agent.nousresearch.com/docs/user-guide/features/extending-the-dashboard)
 - [Public Python API](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins/public-api)
 
-The backend-only dashboard manifest is the minimal `{name, api}` form documented under “One package, both SDKs.” Hermes imports the API as a standalone module, so it loads the adjacent plugin-owned client using a fixed file path. It does not modify core modules, import paths, or credentials.
+The shared dashboard backend retains the `{name, api}` contract documented under “One package, both SDKs.” A separate documented web-dashboard entry now provides read-only connection and assigned-work status, so browser users do not get a missing-script tab. It calls only the fixed same-origin status GET through `SDK.fetchJSON`, performs no polling or mutations, and suppresses late responses after unmount. It does not replace or claim to be the native Desktop UI. Hermes imports the API as a standalone module, so it loads the adjacent plugin-owned client using a fixed file path. It does not modify core modules, import paths, or credentials.
 
 The Desktop half is off by default. It contributes a 320px right-side pane, status chip, `spawn-job` transcript directive, and Settings page. Hermes supplies the unified package's schema form as the “Agent settings” child page. No custom settings writes are implemented.
 
@@ -28,3 +28,4 @@ node tests/desktop-smoke.mjs
 ```
 
 These checks verify backend route restrictions, cache/profile behavior, error handling, settings reads, registration, basic no-session rendering, directive validation, and cleanup. They do not replace testing in a real Hermes Desktop instance. Live authentication, actual server response shapes, visual layout, plugin disable behavior, and job approval flows remain release checks.
+

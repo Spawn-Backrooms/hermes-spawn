@@ -1,11 +1,15 @@
 # Release checklist
 
-## Current installation evidence: November 11, 2026
+## Historical installation evidence: November 11, 2026
 
-The README now documents the merged plugin pin
+The original installation check used plugin pin
 `8876f80d4d410ba0154475b25c320d2b6c24c6a0`. Its matching local file tree passed
 the official Hermes validator and plugin doctor. An existing Hermes v0.23.1
 installation loaded and enabled that tree using the supported `file://` path.
+
+The current README instead installs the later credential-path-fixed runtime
+`9c4f0897ecaf9a13f7d5f333405e851ff6a6e253`. Do not transfer the earlier
+installation result to that pin; record fresh install and connection evidence.
 
 The actual `hermes config set SPAWN_CLIENT_ID hermes` command was verified in a
 fresh temporary profile: it wrote the public identifier to that profile's

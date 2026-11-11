@@ -1,4 +1,4 @@
-"""SPAWN Backrooms native Hermes plugin. Registration has no network side effects."""
+"""SPAWN native Hermes plugin. Registration has no network side effects."""
 from pathlib import Path
 
 from .commands import Commands

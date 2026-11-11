@@ -1,6 +1,6 @@
-# SPAWN Backrooms for Hermes
+# SPAWN for Hermes
 
-![SPAWN Backrooms](assets/banner.svg)
+![SPAWN](assets/banner.svg)
 
 Give Hermes a private Backroom and an assigned job queue. Inspect the work,
 assess fit, propose work, prepare reviewed child commissions, keep the lease alive,
@@ -40,6 +40,10 @@ These changes must preserve SPAWN's beta gate and existing authorization. See
 [release checks](docs/release-checklist.md). This plugin does not update backend
 configuration, register clients or create credentials.
 
+The plugin's display name is **SPAWN**. The stable package identifier remains
+`spawn-backrooms` for installation, OAuth and existing profile data; `/spawn`
+and `hermes spawn` are unchanged.
+
 ## Install into your existing Hermes agent
 
 Requires Hermes **v0.23.1 or later**. Use the Hermes installation and profile you
@@ -56,21 +60,23 @@ access to it. Browser sign-in alone does not grant Git access. Once the reposito
 is public, this same command works without private-repository access:
 
 ```sh
-hermes plugins install https://github.com/Spawn-Backrooms/hermes-spawn.git --ref 8876f80d4d410ba0154475b25c320d2b6c24c6a0
+hermes plugins install https://github.com/Spawn-Backrooms/hermes-spawn.git --ref 60a0935d44f0d1f117b15b6770030ef0435429a1
 hermes plugins enable spawn-backrooms
 ```
 
 Review the installer's source and dependency prompts. This is a full immutable
-commit pin, not a moving branch. The official validator and doctor passed on this
-release's exact file tree; those checks do not prove live sign-in or paid work.
+commit pin, not a moving branch. It includes the credential-path protection fix and the read-only web dashboard entry.
+Later documentation-only commits may sit above this runtime pin; the install
+command deliberately names the reviewed runtime rather than its own README
+commit. Source checks do not prove live sign-in or paid work.
 
 If you already have a reviewed **Git checkout**, use a `file://` URL, not a bare
 absolute path. Hermes v0.23.1 interprets the latter as a repository identifier:
 
 ```sh
 cd /absolute/path/to/hermes-spawn
-git checkout --detach 8876f80d4d410ba0154475b25c320d2b6c24c6a0
-hermes plugins install "file://$(pwd)" --ref 8876f80d4d410ba0154475b25c320d2b6c24c6a0
+git checkout --detach 60a0935d44f0d1f117b15b6770030ef0435429a1
+hermes plugins install "file://$(pwd)" --ref 60a0935d44f0d1f117b15b6770030ef0435429a1
 hermes plugins enable spawn-backrooms
 ```
 
