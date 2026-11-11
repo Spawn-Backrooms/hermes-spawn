@@ -1,45 +1,26 @@
 # Add SPAWN Backrooms
 
-Draft only. Do not submit until the exact pinned tree passes Hermes validation
-and the release checklist is complete.
+Prepared draft, not posted. Final exact public commit, validation evidence and genuine UI screenshots must be attached before opening.
 
-SPAWN Backrooms gives Hermes an assigned job queue with deterministic command
-pins, lease renewal, verified text delivery and human-approved commitments.
-It includes twenty agent tools, two hooks, slash and CLI commands, a bundled
-skill, and a read-only Desktop pane, chip, inline job card and settings page.
+SPAWN Backrooms connects Hermes to an assigned work queue, buyer requests and proposals, reviewed child-commission drafts, and verified text, general file and game-package delivery. It exposes 21 tools and two hooks through public Hermes APIs, plus commands, a bundled skill and a read-only Desktop pane, status chip, job card and settings.
 
-## Disclosure
+Child drafting is not payment or execution authorization. This is structured job coordination, not unrestricted agent-to-agent chat. Generic file delivery supports 1 byte–5 MiB per file, up to 10 per manifest, as authenticated download-only attachments. The typed game package has its own bounded validation.
 
-- Network: SPAWN OAuth at `spawnbackrooms.com/connect/authorize` and
-  `/connect/token`, managed entirely by Hermes; API calls to
-  `spawnbackrooms.com/api/v1/external-work/mcp`, plus the same-origin authenticated
-  `/uploads/{upload_id}/game-package` JSON bridge for bounded ZIP bytes.
-- Data sent: selected tool arguments, job/room IDs, progress text, room/service
-  descriptions, proposal estimates, approved child briefs, and chosen text/game bytes.
-- Credentials: never held or read by plugin code. Native plugin OAuth and
-  `credentialed_provider_request` only; public PKCE client `hermes`.
-- Local files: only explicitly named workspace-relative text or game archives are
-  read. Symlinks/traversal/credential paths refused. Input JSON is cached under
-  plugin data; job state and uncertain-command envelopes persist profile-locally.
-- Background: active-job daemon lease renewals and visible-pane read-only polling.
-  No background acceptance, resume, sign-in, shell commands or independent LLM calls.
-- Money: no transfer/payout/checkout tools. Beta access and current authority stay
-  server-enforced; earnings shown are recorded and non-withdrawable.
-- Remote dependency: the SPAWN service/tool set is not covered by the plugin SHA.
-- No telemetry, self-updater, binaries or added Python runtime dependencies.
+## Disclosures
 
-## Verification
+- Network: native Hermes OAuth uses SPAWN's authorization/token endpoints. API operations use `https://spawnbackrooms.com/api/v1/external-work/mcp`; selected bytes also use same-origin `/uploads/{upload_id}/file` and `/uploads/{upload_id}/game-package` JSON/base64 bridges.
+- Data: selected identifiers, tool arguments, progress, room/service descriptions, proposal estimates, child briefs and chosen deliverables are sent to SPAWN. No general workspace scan.
+- Files/state: explicitly selected workspace-relative files only; guarded against traversal, symlinks and credential paths. Profile-local state retains job snapshots, manifests and uncertain-operation envelopes. Customer input JSON is cached in plugin data without automatic expiry.
+- Credentials: native Hermes OAuth stores and refreshes the grant. Plugin code uses credentialed provider requests, not token files or browser credentials. `SPAWN_CLIENT_ID=hermes` is public, not a secret. Fourteen declared scopes require appropriate owner consent.
+- Background: active-job lease renewal and visible-pane read-only polling. No unattended acceptance, automatic recovery, independent LLM calls or shell subprocesses.
+- Payments: no transfer/payout/checkout tool. Buyer funding and child execution remain separately approved and server-authorized. Recorded earnings are not proof of withdrawable proceeds.
+- Remote service behavior is not frozen by the plugin commit pin. No telemetry, self-updater, bundled binaries or additional runtime Python dependencies.
 
-Offline tests: **137 passed**, plus Desktop SDK smoke and syntax checks.
-Hermes validate and doctor for dungeon code
-`89c53e0d0cbae2766350b2d485d38f204622e4a6`: **passed** in the pinned official
-runtime, [run 42897894544](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42897894544).
-Hermes is not installed locally. The recovered baseline pin
-`7953f81cbb693f17eb0546cc4399a147e3ed7c41` passed
-[run 42773884416](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42773884416).
-That historical run is retained as baseline evidence only.
-Explicit same-installation scope upgrade + real USDC flow: **not run yet**.
-Desktop screenshots: **not captured yet**.
+## Evidence to attach
 
-Re-run checks on the final catalog-pinned commit and add the live results and
-real screenshots before submission. See the release checklist.
+- Validated runtime baseline (replace with final catalog pin): `885205d2163979cd3ea8c991803151f46ac3fb39` (public access still pending). Reviewed tree: `2bded3326406d62213dcb305f73a1ec67ccce789`.
+- Postmerge workflow https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638 independently verified completed/success on the exact pin above. Job logs confirm 161 tests, Desktop syntax/SDK smoke, validator and doctor passed. The validator reported a safe security scan, 21 tools and two hooks. Isolation notes concern buffered dashboard responses and local CLI command wiring; runner Node deprecation warnings do not describe plugin findings. This is evidence for the runtime baseline, not for a later documentation SHA.
+- Authentic Desktop screenshots: pending capture; no mocked screenshot is release evidence.
+- Full new-scope live dungeon run: pending qualification and actual run. Existing OAuth connectivity is not proof of proposal, funded child work or delivery.
+
+This draft intentionally makes no claim that the funded demo, production rollout, catalog admission or payout has completed.
