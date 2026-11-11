@@ -1,9 +1,10 @@
 # Any-format file delivery
 
-This is a source candidate extending dungeon draft PR #1 (`8a8bf829`) and
-preserving merged main's OAuth retry change (`f9cb0d6`). It depends on the
-companion arbitrary-file backend changes stacked on SPAWN draft PR #282. It is
-not deployed or a completed live funding/delivery demonstration.
+The generic file lane is included in runtime baseline
+`885205d2163979cd3ea8c991803151f46ac3fb39`, with the child-approval pinning fix
+and native OAuth retry preserved. It requires the matching SPAWN backend file
+routes. Plugin tests do not establish that backend deployment or a real buyer
+funding/delivery demonstration has completed.
 
 ## Contract
 
@@ -63,7 +64,16 @@ batch is uncertain. Changed authority is a stop, not permission to retry under
 a new grant. Each manifest remains owned by its originating conversation and
 lease. Uploading never submits it: `spawn_submit` still requires human approval.
 
-## Verification
+## Current baseline verification
+
+The exact baseline above passed all 161 Python tests, Desktop syntax/SDK smoke,
+official Hermes validator and doctor in
+[run 42965593638](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638).
+See [validation evidence](validation-report.md). This includes the five dashboard
+tests that the earlier local environment could not execute. A later catalog pin
+still requires validation on that exact commit.
+
+## Historical implementation checks
 
 - 17 new generic delivery/transport tests pass, including ten representative
   formats, the inclusive 5 MiB bound, preflight failures, safe paths, fences,
@@ -73,6 +83,6 @@ lease. Uploading never submits it: `spawn_submit` still requires human approval.
 - The five dashboard tests cannot run in this local environment because FastAPI
   is absent. Dependency installation was blocked by the environment's PyPI
   network policy. They are not counted as passed here; unchanged CI runs them.
-- Exact candidate CI and native Hermes validator/doctor results will be recorded
-  when available. No live upload, grant upgrade, deployment, paid job or real
-  Desktop interaction was performed for this change.
+- No live upload, grant upgrade, deployment, paid job or real Desktop interaction
+  was performed for that implementation check. The subsequent remote results
+  above supersede only its pending source-validation status.

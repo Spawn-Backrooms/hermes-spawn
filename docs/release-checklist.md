@@ -1,6 +1,9 @@
 # Release checklist
 
-This is a development preview, not a submission-ready claim.
+This is a development preview, not a submission-ready claim. Source validation,
+public catalog admission and the live funded demo are separate gates. Completed
+runtime checks refer to `885205d2163979cd3ea8c991803151f46ac3fb39`; a later
+catalog pin must be validated independently. See [evidence](validation-report.md).
 
 ## Local build
 
@@ -10,7 +13,7 @@ This is a development preview, not a submission-ready claim.
 - [x] Deterministic pins taken from the current SPAWN job schema.
 - [x] Offline tests, fake-server workflows and Desktop SDK smoke tests pass.
 - [x] README includes network, file, background, state and money disclosures.
-- [x] `hermes plugins validate . --install-deps` passes on dungeon code `89c53e0d0cbae2766350b2d485d38f204622e4a6` in the pinned official runtime.
+- [x] `hermes plugins validate . --install-deps` passes on runtime baseline `885205d2163979cd3ea8c991803151f46ac3fb39` in the pinned official runtime.
 - [x] `hermes plugins doctor . --ci` passes for that same candidate and runtime.
 - [ ] Run the coordinated delivery validation through the Cloudflare workflow.
 
@@ -20,8 +23,7 @@ Hermes v0.23.1's official release commit was verified as
 on the recovered baseline `7953f81cbb693f17eb0546cc4399a147e3ed7c41`.
 The dungeon candidate independently passed both checks in the unchanged existing
 workflow, [run 42897894544](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42897894544).
-The Hermes runtime is unavailable locally. Actual OAuth/interactive Desktop and
-final catalog pin checks remain separate.
+The latest runtime baseline additionally passed [run 42965593638](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638), including 161 tests and both native checks. Fresh 14-scope consent, interactive Desktop and final catalog pin checks remain separate.
 
 ## SPAWN owner/operator prerequisites
 
@@ -77,7 +79,9 @@ changed during the local implementation.
   the owner separately requests that change. Do not include customer data, inputs,
   caches or private backend files.
 - [x] Confirm the published source commit and its full 40-hex SHA.
-- [ ] Re-run validation on the final catalog-pinned release commit.
+- [ ] Inspect all intended public files and reachable Git history for sensitive material; a clean current tree alone is not clearance for history.
+- [ ] Re-run validation on the final catalog-pinned release commit and read all warnings.
+- [ ] After owner-approved visibility change, verify anonymous clone of that exact commit.
 - [ ] Pin catalog `sha`, quoted `version: "0.1.0"`, `requires_hermes: ">=0.23.1"`,
   `tier: community`. Images must use that same reviewed commit.
 - [ ] Open a draft catalog PR containing only
@@ -96,7 +100,7 @@ local build. See [catalog rules](https://hermes-agent.nousresearch.com/docs/deve
 - [x] Explicit regular-file reads, 5 MiB bound, exact descriptors and canonical manifest verification.
 - [x] Retained batch identity and retry keys survive uncertain upload/finalization outcomes.
 - [x] Existing game/text lanes, human submission approval and main OAuth retry preserved.
-- [ ] Exact candidate full CI, native validator and doctor recorded in docs/file-delivery.md.
+- [x] Runtime baseline full CI, native validator and doctor recorded in docs/file-delivery.md.
 - [ ] Companion backend released through its existing approval and release gates.
 - [ ] Real buyer upload/download hash comparison and Desktop interaction qualified.
 
