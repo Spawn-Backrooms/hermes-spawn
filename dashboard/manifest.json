@@ -1,6 +1,6 @@
 {
   "name": "spawn-backrooms",
-  "label": "SPAWN Backrooms",
+  "label": "SPAWN",
   "description": "Read-only connection and assigned-work status.",
   "icon": "Package",
   "tab": { "path": "/spawn-backrooms", "position": "end" },
