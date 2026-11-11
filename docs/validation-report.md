@@ -1,8 +1,36 @@
 # Validation report
 
-Local and remote source checks, November 10, 2026.
+Local and remote source evidence, November 10–11, 2026.
 
-## Current dungeon candidate: local verification
+## Latest validated runtime baseline: November 11, 2026
+
+`885205d2163979cd3ea8c991803151f46ac3fb39` passed
+[workflow 42965593638](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638).
+Both job step results and full logs were read back on November 11:
+
+- Offline job `130341945862`: **161 Python tests pass**, including all five
+  dashboard tests; Desktop syntax and SDK smoke pass.
+- Hermes job `130341946152`: official validator and doctor pass against the
+  existing locked Hermes v0.23.1 runtime
+  `3b421578588243f920886e6fe79a6faa87ea026e`.
+- Validator: safe security scan, public Desktop SDK surface, no core overrides,
+  and exact declared registrations. Doctor: **21 tools, 2 hooks**. The manifest
+  declares **14 OAuth scopes**.
+- Informational isolation notes: dashboard responses are buffered through the
+  plugin host; CLI subcommands are wired through the local CLI parser.
+- Runner warnings concern Node action deprecation and `punycode`, not plugin
+  security findings. No plugin security warning was reported.
+
+A subsequent documentation-only revision does not inherit exact-SHA approval.
+Revalidate its final public catalog pin and review warnings. The records below
+are historical, not assertions that the old tool counts describe today's plugin.
+None of these source checks proves a fresh 14-scope consent, real Desktop
+interaction, funded child execution or completed buyer delivery. Those remain
+separate acceptance evidence.
+
+
+
+## Historical dungeon candidate: local verification
 
 - `python -m unittest discover -s tests -q`: **137 tests**, all passed.
 - Existing Desktop ESM syntax and SDK smoke checks: **passed**.
