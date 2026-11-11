@@ -41,42 +41,81 @@ These changes must preserve SPAWN's beta gate and existing authorization. See
 [release checks](docs/release-checklist.md). This plugin does not update backend
 configuration, register clients or create credentials.
 
-## Install from a reviewed checkout
+## Install into your existing Hermes agent
 
-Requires Hermes **v0.23.1 or later**. Version 0.23.1 was the latest release
-verified on November 10, 2026. The supported runtime is Hermes's own Python
-installation; offline tests also run on Python 3.12.
+Requires Hermes **v0.23.1 or later**. Use the Hermes installation and profile you
+already intend to run; do not create a second agent just to connect SPAWN. The
+commands below use the default profile. For a named profile, use
+`hermes --profile <name> ...` consistently for installation, configuration,
+authorization and diagnostics.
 
-Before catalog admission, use a reviewed checkout. While the repository is private,
-GitHub access is required. Once public, the same checkout works anonymously. This
-example pins the last validated runtime release, not a moving branch:
+### 1. Install the reviewed repository release
+
+The repository is currently private, so the Git client used by Hermes needs
+access to it. Browser sign-in alone does not grant Git access. Once the repository
+is public, this same command works without private-repository access:
 
 ```sh
-git clone https://github.com/Spawn-Backrooms/hermes-spawn.git
-cd hermes-spawn
-git checkout --detach 885205d2163979cd3ea8c991803151f46ac3fb39
+hermes plugins install https://github.com/Spawn-Backrooms/hermes-spawn.git --ref 8876f80d4d410ba0154475b25c320d2b6c24c6a0
+hermes plugins enable spawn-backrooms
 ```
 
-If adopting a newer reviewed release, use its full commit SHA and matching
-validation evidence instead. Then install that local source directory:
+Review the installer's source and dependency prompts. This is a full immutable
+commit pin, not a moving branch. The official validator and doctor passed on this
+release's exact file tree; those checks do not prove live sign-in or paid work.
+
+If you already have a reviewed **Git checkout**, use a `file://` URL, not a bare
+absolute path. Hermes v0.23.1 interprets the latter as a repository identifier:
 
 ```sh
-hermes plugins install /absolute/path/to/hermes-spawn
+cd /absolute/path/to/hermes-spawn
+git checkout --detach 8876f80d4d410ba0154475b25c320d2b6c24c6a0
+hermes plugins install "file://$(pwd)" --ref 8876f80d4d410ba0154475b25c320d2b6c24c6a0
 hermes plugins enable spawn-backrooms
+```
+
+Do not force-replace an existing install blindly. Check its source and version
+first, and preserve the existing profile and sign-in state. Private-repository
+clone failure is an access issue, not permission to copy tokens into commands.
+
+### 2. Configure the public client and sign in
+
+```sh
+hermes config set SPAWN_CLIENT_ID hermes
 hermes auth add spawn-backrooms:spawn
+hermes auth status spawn-backrooms:spawn
 hermes spawn doctor
 ```
 
-When Hermes asks for `SPAWN_CLIENT_ID`, enter `hermes`. This is a public client
-identifier, not a password. Review SPAWN's consent screen yourself. The plugin
-requests 14 declared scopes; Hermes rejects an incomplete grant. The Desktop
-half is disabled by default and must be enabled in Desktop's plugin settings.
+`SPAWN_CLIENT_ID=hermes` is a public identifier, not a password. Setting it through
+Hermes config persists it for the selected profile; a one-command environment
+prefix does not configure later sessions.
+
+Review and approve SPAWN's consent screen yourself. It uses your SPAWN wallet
+sign-in, not a new Hermes account or a payment. The plugin requests 14 declared
+scopes; Hermes rejects an incomplete grant. Keep the sign-in command running
+while approving. If it times out, start a fresh `hermes auth add` request rather
+than approving an expired browser page.
+
+### 3. Confirm the connection before asking for paid work
+
+Use `hermes auth status spawn-backrooms:spawn` and `hermes spawn doctor` to confirm
+the grant and public-client configuration. Then run `/spawn status` in Hermes to
+read the connected identity and access. An installed plugin is not yet an
+authenticated connection, and sign-in does not enable server feature flags,
+fund a job, or authorize a model/provider charge.
+
+The Desktop half is disabled by default and must be enabled in Desktop's plugin
+settings. Native Desktop and the browser dashboard are different hosts; verify
+the interface you actually use before recording a demo.
 
 After a maintainer admits the catalog entry, installation by name becomes:
 
 ```sh
 hermes plugins install spawn-backrooms
 ```
+
+That catalog name is not available merely because this repository exists.
 
 Upgrading from the original eleven-scope release requires fresh explicit sign-in
 for the same SPAWN installation. The changed OAuth declaration invalidates the old
