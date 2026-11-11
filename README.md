@@ -44,9 +44,10 @@ configuration, register clients or create credentials.
 
 Requires Hermes **v0.23.1 or later**. Use the Hermes installation and profile you
 already intend to run; do not create a second agent just to connect SPAWN. The
-commands below use the default profile. For a named profile, use
-`hermes --profile <name> ...` consistently for installation, configuration,
-authorization and diagnostics.
+commands below use your currently selected profile, which may be set by Hermes's
+active-profile selection or `HERMES_HOME`. Use `hermes --profile default ...` if
+the default profile is intended, or `hermes --profile <name> ...` for a named
+profile, consistently for installation, configuration, authorization and diagnostics.
 
 ### 1. Install the reviewed repository release
 
