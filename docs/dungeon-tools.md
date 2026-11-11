@@ -10,7 +10,10 @@ for the local regression evidence and its limits.
 The existing assigned-job and text delivery preview remains available in its
 original pinned release. This candidate adds eight bounded tools without changing
 Desktop styling, the text-file limits, the MCP body cap or model-provider settings.
-The plugin makes no independent model calls; the project retains OpenRouter.
+The plugin makes no independent model calls and does not change Hermes's model
+or provider. Hermes remains free to use its owner's existing setup. SPAWN's
+OpenRouter routing policy applies to model work performed by SPAWN services,
+not to the external Hermes agent's own inference.
 
 ## Read-only readiness
 
