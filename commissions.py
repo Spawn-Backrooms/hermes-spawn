@@ -132,7 +132,9 @@ class Commissions:
         lines.append("These are approved caps, not a native price quote. The draft moves no funds and starts no child; native review is required before allocation or execution.")
         if pending:
             lines.append("Retry the retained exact draft to recover its uncertain outcome.")
-        return pins, "\n".join(lines)
+        # Pin exactly what the host displays, including service revisions resolved
+        # from shared discovery state. Retained requests use their original children.
+        return {**pins, "children": copy.deepcopy(children)}, "\n".join(lines)
 
     def draft(self, args, conversation, approved_terms):
         with self.state.for_job(args["job_id"]):
@@ -141,8 +143,9 @@ class Commissions:
             if not pending:
                 self.jobs.require_active(conversation, job)
             pins = pending["pins"] if pending else self._pins(job)
-            if pins != approved_terms:
-                raise SpawnError("terms_changed", "The parent, lease or approved plan changed after child approval.")
+            children, queries = (pending["arguments"]["children"], []) if pending else self._children(args, job)
+            if {**pins, "children": children} != approved_terms:
+                raise SpawnError("terms_changed", "The parent, lease, approved plan or selected child terms changed after child approval. Read and approve the new terms.")
             if self.state.get("pending", args["job_id"]) or self.state.get("pending_package", args["job_id"]) or self.state.get("pending_files", args["job_id"]):
                 raise SpawnError("pending_outcome", "Resolve the parent's pending action before drafting a child.")
             if pending:
@@ -153,7 +156,6 @@ class Commissions:
                 # must reject this stale envelope if no original effect exists.
                 arguments = pending["arguments"]
             else:
-                children, queries = self._children(args, job)
                 for query in queries:
                     result = self.discover(query)
                     current = {(s["room_id"], s["service_id"], s["service_hash"]) for s in result["candidates"]}
@@ -162,7 +164,7 @@ class Commissions:
                         raise SpawnError("child_service_changed", "A selected service changed or is no longer eligible. Discover and approve the new terms.")
                 job = self.jobs.snapshot(args["job_id"])
                 self.jobs.require_active(conversation, job)
-                if self._pins(job) != approved_terms:
+                if {**self._pins(job), "children": children} != approved_terms:
                     raise SpawnError("terms_changed", "The parent or approved plan changed during service refresh.")
                 arguments = {"job_id": args["job_id"], "accepted_terms_hash": pins["accepted_terms_hash"],
                              "plan_hash": pins["plan_hash"], "lease_generation": job["lease_generation"],
