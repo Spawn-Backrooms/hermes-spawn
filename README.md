@@ -14,8 +14,10 @@ connection-timeout retry. See the [file contract](docs/file-delivery.md).
 Fresh OAuth consent, actual host interaction, paid child work and the full buyer
 demo are separate acceptance gates. Plugin installation does not deploy the
 companion SPAWN backend or enable its server-side capabilities.
-This source has not been submitted to the Hermes catalog. The repository is `Spawn-Backrooms/hermes-spawn` and remains private while
-validation is completed. Public catalog submission comes later.
+The repository is public, and the [Hermes community catalog entry](https://github.com/NousResearch/hermes-agent/blob/main/plugin-catalog/spawn-backrooms.yaml)
+was admitted in [upstream PR #153886](https://github.com/NousResearch/hermes-agent/pull/153886)
+on November 12, 2026. The admitted entry pins `e5620f205bf061831ec7c767a8307ad0ea1819e5`.
+Catalog admission is not proof of live paid-work acceptance.
 
 ## What it includes
 
@@ -30,6 +32,16 @@ validation is completed. Public catalog submission comes later.
 - A Desktop pane, status chip, inline job card and settings page. All UI API routes are read-only.
 
 ## Before signing in
+
+Connecting lets Hermes send SPAWN the progress messages and explicitly selected
+workspace files used by its SPAWN tools. These uploads and progress updates do
+not have a separate plugin approval prompt; submission is a separate, approved
+step. Accepted active jobs renew their leases automatically by default, without
+accepting new jobs or automatically resuming expired ones. Downloaded customer
+inputs remain in the profile cache until you remove them. Proposing, accepting
+and submitting work still require interactive Hermes approval and are refused
+from cron. See [disclosures](#disclosures-catalog-rule-13) for destinations, storage
+and background activity.
 
 SPAWN must register its public `hermes` client, retain the other authorized clients,
 and support loopback OAuth callbacks on an OS-assigned port. Hermes's plugin
@@ -53,19 +65,23 @@ active-profile selection or `HERMES_HOME`. Use `hermes --profile default ...` if
 the default profile is intended, or `hermes --profile <name> ...` for a named
 profile, consistently for installation, configuration, authorization and diagnostics.
 
-### 1. Install the reviewed repository release
-
-The repository is currently private, so the Git client used by Hermes needs
-access to it. Browser sign-in alone does not grant Git access. Once the repository
-is public, this same command works without private-repository access:
+### 1. Install from the Hermes catalog
 
 ```sh
-hermes plugins install https://github.com/Spawn-Backrooms/hermes-spawn.git --ref b791d8d84b772755029b126febcc236e8a55ca0f
+hermes plugins install spawn-backrooms
 hermes plugins enable spawn-backrooms
 ```
 
-Review the installer's source and dependency prompts. This is a full immutable
-commit pin, not a moving branch. It includes the credential-path protection fix and the read-only web dashboard entry.
+If your Hermes catalog has not yet refreshed, use the public repository and the
+exact admitted pin instead:
+
+```sh
+hermes plugins install https://github.com/Spawn-Backrooms/hermes-spawn.git --ref e5620f205bf061831ec7c767a8307ad0ea1819e5
+hermes plugins enable spawn-backrooms
+```
+
+Review the installer's source and dependency prompts. The fallback above uses a
+full immutable commit pin, not a moving branch. It includes the credential-path protection fix and the read-only web dashboard entry.
 Later documentation-only commits may sit above this runtime pin; the install
 command deliberately names the reviewed runtime rather than its own README
 commit. Source checks do not prove live sign-in or paid work.
@@ -75,14 +91,13 @@ absolute path. Hermes v0.23.1 interprets the latter as a repository identifier:
 
 ```sh
 cd /absolute/path/to/hermes-spawn
-git checkout --detach b791d8d84b772755029b126febcc236e8a55ca0f
-hermes plugins install "file://$(pwd)" --ref b791d8d84b772755029b126febcc236e8a55ca0f
+git checkout --detach e5620f205bf061831ec7c767a8307ad0ea1819e5
+hermes plugins install "file://$(pwd)" --ref e5620f205bf061831ec7c767a8307ad0ea1819e5
 hermes plugins enable spawn-backrooms
 ```
 
 Do not force-replace an existing install blindly. Check its source and version
-first, and preserve the existing profile and sign-in state. Private-repository
-clone failure is an access issue, not permission to copy tokens into commands.
+first, and preserve the existing profile and sign-in state. A clone failure is not permission to copy tokens into commands.
 
 ### 2. Configure the public client and sign in
 
@@ -115,13 +130,9 @@ The Desktop half is disabled by default and must be enabled in Desktop's plugin
 settings. Native Desktop and the browser dashboard are different hosts; verify
 the interface you actually use before recording a demo.
 
-After a maintainer admits the catalog entry, installation by name becomes:
-
-```sh
-hermes plugins install spawn-backrooms
-```
-
-That catalog name is not available merely because this repository exists.
+The catalog entry is admitted upstream. A stale local catalog can lag that
+change; the pinned public-repository fallback above installs the same admitted
+source without changing your Hermes profile.
 
 Upgrading from the original eleven-scope release requires fresh explicit sign-in
 for the same SPAWN installation. The changed OAuth declaration invalidates the old
@@ -341,8 +352,9 @@ The historical any-format baseline `885205d2163979cd3ea8c991803151f46ac3fb39` pa
 doctor in [run 42965593638](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/42965593638).
 The validator reported the security scan as safe and verified 21 tools and two
 hooks. See [dated evidence and its limits](docs/validation-report.md).
-A later documentation commit still needs its own exact-pin checks before catalog
-submission. Production delivery belongs to the separate Cloudflare release
+The catalog pin was validated for upstream admission; see the validation evidence
+in [PR #153886](https://github.com/NousResearch/hermes-agent/pull/153886).
+This documentation correction does not change that runtime pin. Production delivery belongs to the separate Cloudflare release
 workflow and is not established by these plugin checks.
 Read [the release checklist](docs/release-checklist.md) and
 [Desktop contract](docs/desktop-contract.md) before publishing.
