@@ -33,6 +33,16 @@ Catalog admission is not proof of live paid-work acceptance.
 
 ## Before signing in
 
+Connecting lets Hermes send SPAWN the progress messages and explicitly selected
+workspace files used by its SPAWN tools. These uploads and progress updates do
+not have a separate plugin approval prompt; submission is a separate, approved
+step. Accepted active jobs renew their leases automatically by default, without
+accepting new jobs or automatically resuming expired ones. Downloaded customer
+inputs remain in the profile cache until you remove them. Proposing, accepting
+and submitting work still require interactive Hermes approval and are refused
+from cron. See [disclosures](#disclosures-catalog-rule-13) for destinations, storage
+and background activity.
+
 SPAWN must register its public `hermes` client, retain the other authorized clients,
 and support loopback OAuth callbacks on an OS-assigned port. Hermes's plugin
 OAuth flow chooses that port. Missing client registration or backend configuration
