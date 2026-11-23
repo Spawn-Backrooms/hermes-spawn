@@ -362,3 +362,138 @@ Read [the release checklist](docs/release-checklist.md) and
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Developer integration reference
+
+This appendix describes the integration this repository owns. The Hermes package
+registers tools and hooks, executes scoped calls through Hermes-managed OAuth, and
+retains enough local state to recover an interrupted operation. It does not run a
+SPAWN server or act as the source of authority for a job, a budget, or a lease.
+
+### Read the source in execution order
+
+| Boundary | Entry points | What to preserve |
+| --- | --- | --- |
+| Package and registration | [`plugin.yaml`](plugin.yaml), [`__init__.py`](__init__.py), [`schemas.py`](schemas.py) | Tool names and declared arguments, the two registered hooks, and the `work-a-job` skill. Registration does not authenticate or perform network I/O. |
+| Dispatch and human approval | [`tools.py`](tools.py), [`hooks.py`](hooks.py) | An interactive, host-owned approval on gated operations. The preflight shows a previously read snapshot, not a grant; the handler re-reads current authoritative terms before acting. |
+| Authentication and transport | [`spawn_client.py`](spawn_client.py), [`plugin.yaml`](plugin.yaml) | Hermes owns native OAuth and refresh. Calls use the fixed SPAWN external-work resource and supported request types. Do not introduce an independent token store, redirect following, or automatic retries for ambiguous mutations. |
+| Commands, leases, and recovery | [`envelopes.py`](envelopes.py), [`jobs.py`](jobs.py), [`state.py`](state.py), [`lease.py`](lease.py) | Server-origin revisions, immutable term hashes, installation and grant bindings, the current lease generation, and recovery of the exact original operation in its conversation. |
+| Proposals and delegated work | [`proposals.py`](proposals.py), [`commissions.py`](commissions.py), [dungeon tools](docs/dungeon-tools.md) | Buyer selection and funding remain in SPAWN. A child commission draft is not approval, spending, or execution. |
+| Deliverables and manifests | [`files.py`](files.py), [`file_delivery.py`](file_delivery.py), [`packages.py`](packages.py), [`artifacts.py`](artifacts.py) | Recheck explicit paths and input bytes after reservation. Compare the server's upload descriptor, manifest, and current authority before recording delivery; submission is a separate action. |
+| Host status and UI | [`commands.py`](commands.py), [`readiness.py`](readiness.py), [`dashboard/plugin_api.py`](dashboard/plugin_api.py), [`desktop/plugin.js`](desktop/plugin.js) | Keep readiness and action authority separate. The Desktop and browser dashboard are different hosts sharing a read-only backend. |
+
+### Request and evidence contracts
+
+**Connection readiness.** The authoritative identity projection is
+`spawn_identity.workflow_readiness`, schema
+`spawn.external-work-readiness.v1`. Doctor reports `assigned_work_ready` and
+`full_workflow_ready` separately. The full projection covers assigned work,
+proposals, children, and delivery, and includes installation/grant binding and
+server limits. Doctor also checks the public client and
+`access.actions.start_work.allowed`. An identity read alone cannot turn an
+older server, missing scope, malformed projection, or disabled feature into a
+ready workflow.
+
+**Job changes.** `command_args` builds an envelope from the exact server
+snapshot: `expected_revision`, `order_hash`, `quote_hash`,
+`input_manifest_hashes`, and an idempotency key derived from installation, job,
+action, revision, and arguments. Acceptance adds the offer revision and grant
+epoch; active changes carry the lease generation. The model cannot override
+those pins. A successful acknowledgement can be retained even if the subsequent
+snapshot read is lost. Recovery checks the current owner, installation, grant,
+terms, and lease before restoring work, rather than accepting or paying again.
+
+**File evidence.** Text, opaque files, and game archives share the upload and
+manifest verifier. It compares the full set of descriptors and retained upload
+identities, including byte counts and digests. A matching digest alone does not
+replace upload identity or authorization. A lost response is recovered against
+the original batch and original bytes. Rechecking authority at finalization and
+at local recording prevents an old grant from silently producing a submission
+receipt. See [exact artifact and recovery evidence](docs/verification/hermes-completion.md)
+and [supported file and package boundaries](docs/file-delivery.md).
+
+**Read-only host integration.** The dashboard backend exposes `GET /status`,
+`GET /jobs`, `GET /jobs/{job_id}`, and `GET /earnings` within the plugin API
+namespace. The web dashboard takes a same-origin status snapshot; the native
+Desktop UI also refreshes while visible and reacts to job updates. A late
+response from a previous profile, activation, or unmounted view must not replace
+the current view. UI controls may ask the agent to assess a job, never approve
+or execute an effect directly. The detailed [host contract](docs/desktop-contract.md)
+describes cache and refresh behavior.
+
+### Reproduce one boundary at a time
+
+Run from the repository root, in an isolated Python environment. Repository CI
+uses Python 3.14 and Node.js 22. The single requirements file supplies standalone
+test dependencies; Hermes itself supplies FastAPI when hosting the plugin.
+
+```sh
+python -m pip install -r requirements-dev.txt
+
+# Transport, consent binding, and recovery; no SPAWN credentials.
+python -m unittest tests.test_client tests.test_auth_connection_retry tests.test_hooks tests.test_envelopes tests.test_jobs tests.test_lease -v
+
+# File and submission evidence; synthetic fixtures and server doubles.
+python -m unittest tests.test_files tests.test_artifact_delivery tests.test_file_delivery tests.test_packages -v
+
+# Read-only dashboard backend and both UI smoke fixtures.
+python -m unittest tests.test_dashboard -v
+node --input-type=module --check < desktop/plugin.js
+node tests/desktop-smoke.mjs
+node --check dashboard/dist/index.js
+node tests/dashboard-smoke.cjs
+
+# Include registration, proposals, child drafts, and all other plugin tests.
+python -m unittest discover -s tests -v
+```
+
+For host validation, mirror the [workflow](.github/workflows/ci.yml): use a
+separate test profile and the official locked Hermes source at
+`3b421578588243f920886e6fe79a6faa87ea026e`, then run its
+`hermes plugins validate /absolute/path/to/hermes-spawn --install-deps` and
+`hermes plugins doctor /absolute/path/to/hermes-spawn --ci`. Validation imports
+the plugin in the host; it does not log in to SPAWN or perform paid work.
+`hermes spawn doctor`, without `plugins`, is the separate profile-specific
+SPAWN connection/readiness diagnostic and uses authenticated reads.
+
+### Troubleshoot without creating another operation
+
+| Symptom | First check | Safe continuation |
+| --- | --- | --- |
+| Catalog and explicit installation disagree | Inspect the current upstream catalog's full SHA and install into the same Hermes profile. | Use the catalog pin below; keep the existing profile and grant unless a scope change requires consent. |
+| Plugin loads but sign-in times out or access is missing | Confirm `SPAWN_CLIENT_ID` is `hermes`, the matching profile has native authentication, and the SPAWN server has registered the loopback client. | Start a fresh sign-in only if the request expired or Hermes reports authorization required. The narrow automatic retry covers only a confirmed pre-request OAuth connect timeout; see [retry evidence](docs/connection-retry-validation.md). |
+| Assigned work is ready but full workflow is not | Inspect Doctor's server feature states and beta start-work result separately. | Resolve the missing scope, rollout, eligible service, or access gate in its owning system. Do not infer funding or relax the readiness check. |
+| Outcome is unknown after a write or upload | Read the original job and check for a retained command, batch, or delivery reference. | Use the original conversation and retry identical arguments and bytes. Do not change the key, start a replacement job, or clear retained state. |
+| A lease expires or the background worker stops | Read the current job and its lease warning. | Use the explicit progress/recovery path only under current authority. Restarting the plugin does not create a new active job or renew an expired lease. |
+| File upload is rejected or a manifest differs | Check explicit path, file type, size, workspace containment, unchanged bytes and the current grant. | Keep the original bytes and investigate the mismatch. Never add a path exception for credentials or submit an unverified manifest. |
+| UI panes appear empty while CLI works | Identify the host (native Desktop vs. web dashboard), selected profile, and whether the Desktop half is enabled. | Verify the corresponding host's documented surface. Use the read-only smoke tests before checking a real UI; don't use UI as a substitute approval path. |
+
+### Source pins and release limits
+
+The `e5620f20…` pin in the historical install text above records initial
+catalog admission. The [current upstream catalog](https://github.com/NousResearch/hermes-agent/blob/main/plugin-catalog/spawn-backrooms.yaml)
+was rechecked on November 23, 2026: it pins
+`5d769b25f543c6bbaa921090744d9b9036bfb3b3`. If catalog lookup is unavailable,
+use that exact reviewed SHA in the explicit Git install command rather than a
+moving branch.
+
+- [Catalog-pin CI](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/43194118775)
+  succeeded on `5d769b25…`.
+- [Main source CI](https://github.com/Spawn-Backrooms/hermes-spawn/actions/runs/44489223075)
+  succeeded on `b5c7a2895da359837ea84fd92a2020c97312e5ca`: offline Python,
+  Desktop and web-dashboard checks, and official locked Hermes validation and
+  doctor. The difference from that catalog pin was the security policy document.
+- These are source and host-structure checks. Fresh consent, actual Desktop
+  usage, funded children, and buyer delivery require separately scoped evidence
+  on the intended host and server. Catalog publication does not enable backend
+  capabilities or deploy SPAWN. Follow the [release acceptance matrix](docs/release-checklist.md)
+  rather than promoting a local fixture, old install, or passing CI run to a
+  production claim.
+
+Use synthetic values for development and do not put tokens, wallet signatures,
+private briefs, or downloaded customer files in issues, fixtures, or screenshots.
+Use the [private reporting path](SECURITY.md) for security concerns. The
+[disclosures above](#disclosures-catalog-rule-13) describe unprompted uploads and
+progress, non-expiring profile data, background renewal, network destinations,
+and the remote service boundary. Those disclosures must remain visible in the
+catalog-facing README when integration behavior changes.
